@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Camera, Home, Images, Search, User, Wallet } from "lucide-react"
+import { Camera, Home, Images, Search, User } from "lucide-react"
+import { WalletConnect } from "@/components/wallet-connect"
 
 const navigation = [
   { name: "Home", href: "/", icon: Home },
@@ -51,10 +52,7 @@ export function Navigation() {
 
           {/* Connect Wallet Button */}
           <div className="flex items-center space-x-4">
-            <Button variant="glow" size="sm" className="hidden sm:flex">
-              <Wallet className="w-4 h-4 mr-2" />
-              Connect Wallet
-            </Button>
+            <WalletConnect />
             
             {/* Mobile menu button */}
             <Button variant="ghost" size="icon" className="md:hidden">
@@ -86,10 +84,7 @@ export function Navigation() {
               </Link>
             )
           })}
-          <Button variant="glow" className="w-full mt-4">
-            <Wallet className="w-4 h-4 mr-2" />
-            Connect Wallet
-          </Button>
+          <WalletConnect />
         </div>
       </div>
     </nav>

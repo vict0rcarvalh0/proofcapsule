@@ -4,6 +4,7 @@ import "./globals.css"
 import { Navigation } from "@/components/navigation"
 import { Bubbles } from "@/components/bubbles"
 import { Footer } from "@/components/footer"
+import { WagmiWrapper } from "@/components/providers/wagmi-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -20,14 +21,16 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
-        <Bubbles />
-        <div className="relative min-h-screen flex flex-col">
-          <Navigation />
-          <main className="pt-16 flex-1">
-            {children}
-          </main>
-          <Footer />
-        </div>
+        <WagmiWrapper>
+          <Bubbles />
+          <div className="relative min-h-screen flex flex-col">
+            <Navigation />
+            <main className="pt-16 flex-1">
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </WagmiWrapper>
       </body>
     </html>
   )
