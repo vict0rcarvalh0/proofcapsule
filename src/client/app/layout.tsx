@@ -3,6 +3,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { Navigation } from "@/components/navigation"
 import { Bubbles } from "@/components/bubbles"
+import { Footer } from "@/components/footer"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -20,11 +21,12 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className={`${inter.className} min-h-screen bg-background text-foreground`}>
         <Bubbles />
-        <div className="relative min-h-screen">
+        <div className="relative min-h-screen flex flex-col">
           <Navigation />
-          <main className="pt-16">
+          <main className="pt-16 flex-1">
             {children}
           </main>
+          <Footer />
         </div>
       </body>
     </html>
