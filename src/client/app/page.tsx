@@ -7,8 +7,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden gradient-bg py-20 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-600/10"></div>
+      <section className="relative overflow-hidden bg-background py-20 px-4 sm:px-6 lg:px-8">
         <div className="relative max-w-7xl mx-auto text-center">
           <div className="mb-8">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
@@ -57,7 +56,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="gradient-border hover:glow-hover transition-all duration-300">
+            <Card className="hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
                   <Shield className="w-6 h-6 text-white" />
@@ -69,7 +68,7 @@ export default function HomePage() {
               </CardHeader>
             </Card>
 
-            <Card className="gradient-border hover:glow-hover transition-all duration-300">
+            <Card className="hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-600 rounded-lg flex items-center justify-center mb-4">
                   <Clock className="w-6 h-6 text-white" />
@@ -81,7 +80,7 @@ export default function HomePage() {
               </CardHeader>
             </Card>
 
-            <Card className="gradient-border hover:glow-hover transition-all duration-300">
+            <Card className="hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mb-4">
                   <Zap className="w-6 h-6 text-white" />
@@ -93,7 +92,7 @@ export default function HomePage() {
               </CardHeader>
             </Card>
 
-            <Card className="gradient-border hover:glow-hover transition-all duration-300">
+            <Card className="hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg flex items-center justify-center mb-4">
                   <Globe className="w-6 h-6 text-white" />
@@ -105,7 +104,7 @@ export default function HomePage() {
               </CardHeader>
             </Card>
 
-            <Card className="gradient-border hover:glow-hover transition-all duration-300">
+            <Card className="hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-600 rounded-lg flex items-center justify-center mb-4">
                   <Users className="w-6 h-6 text-white" />
@@ -117,7 +116,7 @@ export default function HomePage() {
               </CardHeader>
             </Card>
 
-            <Card className="gradient-border hover:glow-hover transition-all duration-300">
+            <Card className="hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
                   <Camera className="w-6 h-6 text-white" />
@@ -133,7 +132,7 @@ export default function HomePage() {
       </section>
 
       {/* Use Cases Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/20">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
@@ -187,16 +186,18 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="relative">
-              <div className="aspect-square bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-2xl p-8 flex items-center justify-center">
-                <div className="text-center">
-                  <Camera className="w-24 h-24 text-primary mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold text-foreground mb-2">Ready to Start?</h3>
-                  <p className="text-muted-foreground mb-6">Join thousands of users already preserving their moments on-chain.</p>
-                  <Button variant="glow" size="lg" asChild>
-                    <Link href="/capture">Create Your First Capsule</Link>
-                  </Button>
-                </div>
+            <div className="text-center space-y-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full mb-4">
+                <Camera className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-foreground mb-3">Ready to Start?</h3>
+                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                  Join thousands of users already preserving their moments on-chain.
+                </p>
+                <Button variant="glow" size="lg" asChild>
+                  <Link href="/capture">Create Your First Capsule</Link>
+                </Button>
               </div>
             </div>
           </div>

@@ -49,7 +49,7 @@ export default function ProfilePage() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Wallet Connection */}
-            <Card className="gradient-border">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Wallet className="w-5 h-5 mr-2" />
@@ -97,7 +97,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Account Statistics */}
-            <Card className="gradient-border">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Shield className="w-5 h-5 mr-2" />
@@ -130,7 +130,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Privacy Settings */}
-            <Card className="gradient-border">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Lock className="w-5 h-5 mr-2" />
@@ -183,7 +183,7 @@ export default function ProfilePage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Actions */}
-            <Card className="gradient-border">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Settings className="w-5 h-5 mr-2" />
@@ -211,7 +211,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Recent Activity */}
-            <Card className="gradient-border">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Bell className="w-5 h-5 mr-2" />
@@ -244,7 +244,7 @@ export default function ProfilePage() {
             </Card>
 
             {/* Support */}
-            <Card className="gradient-border">
+            <Card>
               <CardHeader>
                 <CardTitle>Need Help?</CardTitle>
               </CardHeader>

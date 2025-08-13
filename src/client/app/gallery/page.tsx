@@ -137,7 +137,7 @@ export default function GalleryPage() {
         {/* Capsules Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCapsules.map((capsule) => (
-            <Card key={capsule.id} className="gradient-border hover:glow-hover transition-all duration-300 group">
+            <Card key={capsule.id} className="hover:shadow-lg transition-all duration-300 group">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

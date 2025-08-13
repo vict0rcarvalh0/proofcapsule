@@ -88,7 +88,7 @@ export default function VerifyPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Verification Input */}
           <div className="space-y-6">
-            <Card className="gradient-border">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Search className="w-5 h-5 mr-2" />
@@ -135,7 +135,7 @@ export default function VerifyPage() {
               </CardContent>
             </Card>
 
-            <Card className="gradient-border">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <FileText className="w-5 h-5 mr-2" />
@@ -176,7 +176,7 @@ export default function VerifyPage() {
           {/* Verification Result */}
           <div className="space-y-6">
             {verificationResult ? (
-              <Card className="gradient-border">
+              <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center">
@@ -267,7 +267,7 @@ export default function VerifyPage() {
                 </CardContent>
               </Card>
             ) : (
-              <Card className="gradient-border">
+              <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <Shield className="w-5 h-5 mr-2" />
@@ -287,7 +287,7 @@ export default function VerifyPage() {
             )}
 
             {/* Verification Info */}
-            <Card className="gradient-border">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Shield className="w-5 h-5 mr-2" />
