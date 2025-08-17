@@ -4,69 +4,64 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Search, Shield, CheckCircle, XCircle, Clock, Hash, FileText, MapPin, Calendar, Copy, ExternalLink } from "lucide-react"
+import { useAccount } from "wagmi"
+import { verificationService, type VerificationWithCapsule } from "@/lib/services"
+import { hashFile, formatDateLong } from "@/lib/utils/browser"
 
 export default function VerifyPage() {
+  const { address, isConnected } = useAccount()
   const [hash, setHash] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
-  const [verificationResult, setVerificationResult] = useState<any>(null)
+  const [verificationResult, setVerificationResult] = useState<VerificationWithCapsule | null>(null)
   const [fileHash, setFileHash] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   const handleVerify = async () => {
-    if (!hash.trim()) return
+    if (!hash.trim() || !isConnected || !address) {
+      setError("Please connect your wallet and enter a hash")
+      return
+    }
 
     setIsVerifying(true)
-    
-    // Simulate verification delay
-    setTimeout(() => {
-      // Mock verification result
-      setVerificationResult({
-        verified: true,
-        capsule: {
-          id: "1",
-          title: "Sunset at Venice Beach",
-          description: "Beautiful golden hour at the beach",
-          timestamp: "2024-01-15T18:30:00Z",
-          location: "Venice Beach, CA",
-          hash: hash,
-          type: "image",
-          blockNumber: 12345678,
-          transactionHash: "0xabcd1234...5678efgh",
-          creator: "0x1234...5678",
-        }
-      })
+    setError(null)
+    setVerificationResult(null)
+
+    try {
+      // Verify the content hash
+      const response = await verificationService.verifyByHash(hash, address, "Manual verification")
+      
+      if (response.success && response.data) {
+        setVerificationResult(response.data)
+      } else {
+        setError(response.error || 'Capsule not found')
+      }
+    } catch (error) {
+      console.error('Error verifying capsule:', error)
+      setError('Failed to verify capsule')
+    } finally {
       setIsVerifying(false)
-    }, 2000)
+    }
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Simulate file hashing
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      // In real implementation, this would use crypto-js or similar
-      const mockHash = `0x${Math.random().toString(16).substring(2, 10)}...${Math.random().toString(16).substring(2, 10)}`
-      setFileHash(mockHash)
-      setHash(mockHash)
+    try {
+      const fileHashResult = await hashFile(file)
+      setFileHash(fileHashResult)
+      setHash(fileHashResult)
+    } catch (error) {
+      console.error('Error hashing file:', error)
+      setError('Failed to hash file')
     }
-    reader.readAsArrayBuffer(file)
   }
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-  }
+  // formatDateLong is now imported from browser utils
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
@@ -84,6 +79,13 @@ export default function VerifyPage() {
             Verify the authenticity and timestamp of any Proof Capsule using its hash or by uploading the original file.
           </p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-800 text-sm">{error}</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Verification Input */}
@@ -180,86 +182,57 @@ export default function VerifyPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center">
-                      {verificationResult.verified ? (
-                        <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
-                      ) : (
-                        <XCircle className="w-5 h-5 mr-2 text-red-500" />
-                      )}
+                      <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
                       Verification Result
                     </CardTitle>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      verificationResult.verified 
-                        ? "bg-green-500/20 text-green-400" 
-                        : "bg-red-500/20 text-red-400"
-                    }`}>
-                      {verificationResult.verified ? "VERIFIED" : "NOT FOUND"}
+                    <div className="px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                      VERIFIED
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-3">
                     <div>
-                      <h4 className="font-medium text-foreground mb-1">Title</h4>
-                      <p className="text-sm text-muted-foreground">{verificationResult.capsule.title}</p>
+                      <h4 className="font-medium text-foreground mb-1">Capsule ID</h4>
+                      <p className="text-sm text-muted-foreground">#{verificationResult.capsule.tokenId}</p>
                     </div>
                     
                     <div>
                       <h4 className="font-medium text-foreground mb-1">Description</h4>
-                      <p className="text-sm text-muted-foreground">{verificationResult.capsule.description}</p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="font-medium text-foreground mb-1 flex items-center">
-                          <Calendar className="w-4 h-4 mr-1" />
-                          Timestamp
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDate(verificationResult.capsule.timestamp)}
-                        </p>
-                      </div>
-                      
-                      {verificationResult.capsule.location && (
-                        <div>
-                          <h4 className="font-medium text-foreground mb-1 flex items-center">
-                            <MapPin className="w-4 h-4 mr-1" />
-                            Location
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {verificationResult.capsule.location}
-                          </p>
-                        </div>
-                      )}
+                      <p className="text-sm text-muted-foreground">
+                        {verificationResult.capsule.description || "No description provided"}
+                      </p>
                     </div>
 
                     <div>
-                      <h4 className="font-medium text-foreground mb-1">Blockchain Data</h4>
+                      <h4 className="font-medium text-foreground mb-1">Content Hash</h4>
+                      <p className="text-sm font-mono text-muted-foreground">
+                        {verificationResult.capsule.contentHash}
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-foreground mb-1">Verification Details</h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Block Number:</span>
-                          <span className="font-mono">{verificationResult.capsule.blockNumber}</span>
+                          <span className="text-muted-foreground">Verified by:</span>
+                          <span className="font-mono">{verificationResult.verification.verifierAddress}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Creator:</span>
-                          <span className="font-mono">{verificationResult.capsule.creator}</span>
+                          <span className="text-muted-foreground">Method:</span>
+                          <span className="font-mono">{verificationResult.verification.verificationMethod}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Transaction:</span>
-                          <div className="flex items-center space-x-1">
-                            <span className="font-mono">{verificationResult.capsule.transactionHash}</span>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                              <Copy className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                              <ExternalLink className="w-3 h-3" />
-                            </Button>
-                          </div>
+                          <span className="text-muted-foreground">Verified at:</span>
+                                                     <span className="font-mono">
+                             {formatDateLong(verificationResult.verification.verifiedAt.toString())}
+                           </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                                     <div className="pt-4 border-t border-border">
+                  <div className="pt-4 border-t border-border">
                     <Button variant="outline" className="w-full" onClick={() => setVerificationResult(null)}>
                       Verify Another
                     </Button>

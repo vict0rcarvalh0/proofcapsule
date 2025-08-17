@@ -1,32 +1,68 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { User, Wallet, Settings, Shield, Download, Trash2, Bell, Globe, Lock, Key } from "lucide-react"
+import { User, Wallet, Settings, Shield, Download, Trash2, Bell, Globe, Lock, Key, Loader2 } from "lucide-react"
+import { useAccount } from "wagmi"
+import { analyticsService, type UserAnalytics } from "@/lib/services"
+import { formatDate } from "@/lib/utils/browser"
 
 export default function ProfilePage() {
-  const [isConnected, setIsConnected] = useState(false)
-  const [walletAddress, setWalletAddress] = useState("0x1234...5678")
+  const { address, isConnected } = useAccount()
+  const [userStats, setUserStats] = useState<UserAnalytics | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [notifications, setNotifications] = useState(true)
   const [publicProfile, setPublicProfile] = useState(false)
 
-  const mockStats = {
-    totalCapsules: 24,
-    totalValue: "2.4 ETH",
-    firstCapsule: "2024-01-05",
-    lastCapsule: "2024-01-15",
+  // Load user stats on component mount
+  useEffect(() => {
+    const loadUserStats = async () => {
+      if (!isConnected || !address) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        const response = await analyticsService.getUserStats(address)
+        
+        if (response.success && response.data) {
+          setUserStats(response.data)
+        } else {
+          setError(response.error || 'Failed to load user stats')
+        }
+      } catch (error) {
+        console.error('Error loading user stats:', error)
+        setError('Failed to load user stats')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadUserStats()
+  }, [isConnected, address])
+
+  const formatUserDate = (date: Date | null) => {
+    if (!date) return "Never"
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
   }
 
-  const handleConnectWallet = () => {
-    setIsConnected(true)
-    // TODO: Implement actual wallet connection
+  const getDaysActive = () => {
+    if (!userStats?.firstCapsuleAt) return 0
+    const firstDate = new Date(userStats.firstCapsuleAt)
+    const now = new Date()
+    return Math.ceil((now.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24))
   }
 
-  const handleDisconnectWallet = () => {
-    setIsConnected(false)
-    setWalletAddress("")
-  }
+  // Wallet connection is handled by wagmi
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
@@ -60,7 +96,7 @@ export default function ProfilePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {isConnected ? (
+                {isConnected && address ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between p-4 bg-muted/20 rounded-lg">
                       <div className="flex items-center space-x-3">
@@ -69,7 +105,7 @@ export default function ProfilePage() {
                         </div>
                         <div>
                           <p className="font-medium text-foreground">Connected Wallet</p>
-                          <p className="text-sm text-muted-foreground font-mono">{walletAddress}</p>
+                          <p className="text-sm text-muted-foreground font-mono">{address}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -77,9 +113,6 @@ export default function ProfilePage() {
                         <span className="text-sm text-green-400">Connected</span>
                       </div>
                     </div>
-                    <Button variant="outline" onClick={handleDisconnectWallet}>
-                      Disconnect Wallet
-                    </Button>
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -88,7 +121,7 @@ export default function ProfilePage() {
                     <p className="text-muted-foreground mb-6">
                       Connect your wallet to start creating Proof Capsules.
                     </p>
-                    <Button variant="glow" onClick={handleConnectWallet}>
+                    <Button variant="glow">
                       Connect Wallet
                     </Button>
                   </div>
@@ -108,24 +141,35 @@ export default function ProfilePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-muted/20 rounded-lg">
-                    <p className="text-2xl font-bold text-foreground">{mockStats.totalCapsules}</p>
-                    <p className="text-sm text-muted-foreground">Total Capsules</p>
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
+                    <span className="text-muted-foreground">Loading stats...</span>
                   </div>
-                  <div className="text-center p-4 bg-muted/20 rounded-lg">
-                    <p className="text-2xl font-bold text-foreground">{mockStats.totalValue}</p>
-                    <p className="text-sm text-muted-foreground">Portfolio Value</p>
+                ) : error ? (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-800 text-sm">{error}</p>
                   </div>
-                  <div className="text-center p-4 bg-muted/20 rounded-lg">
-                    <p className="text-2xl font-bold text-foreground">15</p>
-                    <p className="text-sm text-muted-foreground">Days Active</p>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-muted/20 rounded-lg">
+                      <p className="text-2xl font-bold text-foreground">{userStats?.totalCapsules || 0}</p>
+                      <p className="text-sm text-muted-foreground">Total Capsules</p>
+                    </div>
+                    <div className="text-center p-4 bg-muted/20 rounded-lg">
+                      <p className="text-2xl font-bold text-foreground">{userStats?.publicCapsules || 0}</p>
+                      <p className="text-sm text-muted-foreground">Public Capsules</p>
+                    </div>
+                    <div className="text-center p-4 bg-muted/20 rounded-lg">
+                      <p className="text-2xl font-bold text-foreground">{getDaysActive()}</p>
+                      <p className="text-sm text-muted-foreground">Days Active</p>
+                    </div>
+                    <div className="text-center p-4 bg-muted/20 rounded-lg">
+                      <p className="text-2xl font-bold text-foreground">{userStats?.totalVerifications || 0}</p>
+                      <p className="text-sm text-muted-foreground">Verifications</p>
+                    </div>
                   </div>
-                  <div className="text-center p-4 bg-muted/20 rounded-lg">
-                    <p className="text-2xl font-bold text-foreground">8</p>
-                    <p className="text-sm text-muted-foreground">This Month</p>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 

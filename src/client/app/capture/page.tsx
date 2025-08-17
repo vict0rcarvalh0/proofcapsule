@@ -1,16 +1,23 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Camera, Upload, FileText, MapPin, Calendar, Hash, Shield, Zap } from "lucide-react"
+import { useAccount } from "wagmi"
+import { capsulesService, analyticsService, type CreateCapsuleData } from "@/lib/services"
+import { hashFile } from "@/lib/utils/browser"
 
 export default function CapturePage() {
+  const { address, isConnected } = useAccount()
   const [files, setFiles] = useState<File[]>([])
   const [description, setDescription] = useState("")
   const [location, setLocation] = useState("")
+  const [isPublic, setIsPublic] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [stats, setStats] = useState({ totalCapsules: 0, todayCapsules: 0, activeUsers: 0 })
+  const [error, setError] = useState<string | null>(null)
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles(acceptedFiles)
@@ -21,29 +28,94 @@ export default function CapturePage() {
     setFiles(selectedFiles)
   }
 
+  // Load stats on component mount
+  useEffect(() => {
+    const loadStats = async () => {
+      const response = await analyticsService.getGlobalStats()
+      if (response.success && response.data) {
+        setStats({
+          totalCapsules: response.data.totalCapsules,
+          todayCapsules: response.data.todayCapsules,
+          activeUsers: response.data.totalUsers
+        })
+      }
+    }
+    loadStats()
+  }, [])
+
   const handleCapture = async () => {
-    if (files.length === 0) return
+    if (files.length === 0 || !isConnected || !address) {
+      setError("Please connect your wallet and select files")
+      return
+    }
 
     setIsUploading(true)
     setUploadProgress(0)
+    setError(null)
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsUploading(false)
-          return 100
-        }
-        return prev + 10
-      })
-    }, 200)
+    try {
+      // Step 1: Hash the files
+      setUploadProgress(20)
+      const fileHashes = await Promise.all(
+        files.map(file => hashFile(file))
+      )
+      
+      // For now, we'll use the first file's hash as the content hash
+      const contentHash = fileHashes[0]
+      
+      setUploadProgress(40)
 
-    // TODO: Implement actual blockchain upload
-    // 1. Hash the files locally
-    // 2. Upload to IPFS/Arweave (optional)
-    // 3. Create smart contract transaction
-    // 4. Mint Proof Capsule NFT
+      // Step 2: Create capsule data
+      const capsuleData: CreateCapsuleData = {
+        tokenId: Date.now(), // This should come from blockchain transaction
+        walletAddress: address,
+        contentHash,
+        description: description || undefined,
+        location: location || undefined,
+        isPublic,
+        // TODO: Add blockchain transaction data
+        // blockNumber: receipt.blockNumber,
+        // transactionHash: receipt.transactionHash,
+        // gasUsed: receipt.gasUsed
+      }
+
+      setUploadProgress(60)
+
+      // Step 3: Save to database
+      const response = await capsulesService.createCapsule(capsuleData)
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to create capsule')
+      }
+
+      setUploadProgress(100)
+
+      // Step 4: Reset form and show success
+      setFiles([])
+      setDescription("")
+      setLocation("")
+      setIsPublic(true)
+      
+      // Refresh stats
+      const statsResponse = await analyticsService.getGlobalStats()
+      if (statsResponse.success && statsResponse.data) {
+        setStats({
+          totalCapsules: statsResponse.data.totalCapsules,
+          todayCapsules: statsResponse.data.todayCapsules,
+          activeUsers: statsResponse.data.totalUsers
+        })
+      }
+
+      // TODO: Show success notification
+      console.log('Capsule created successfully:', response.data)
+
+    } catch (error) {
+      console.error('Error creating capsule:', error)
+      setError(error instanceof Error ? error.message : 'Failed to create capsule')
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(0)
+    }
   }
 
   return (
@@ -167,6 +239,23 @@ export default function CapturePage() {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={isPublic}
+                      onChange={(e) => setIsPublic(e.target.checked)}
+                      className="rounded border-border focus:ring-primary/20"
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      Make this capsule public
+                    </span>
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Public capsules can be viewed by anyone. Private capsules are only visible to you.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
@@ -190,6 +279,13 @@ export default function CapturePage() {
                 </div>
               )}
             </Button>
+
+            {/* Error Display */}
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 text-sm">{error}</p>
+              </div>
+            )}
 
             {/* Progress Bar */}
             {isUploading && (
@@ -256,15 +352,15 @@ export default function CapturePage() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Total Capsules</span>
-                  <span className="text-sm font-medium text-foreground">1,234,567</span>
+                  <span className="text-sm font-medium text-foreground">{stats.totalCapsules.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Today's Captures</span>
-                  <span className="text-sm font-medium text-foreground">892</span>
+                  <span className="text-sm font-medium text-foreground">{stats.todayCapsules.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Active Users</span>
-                  <span className="text-sm font-medium text-foreground">45,678</span>
+                  <span className="text-sm font-medium text-foreground">{stats.activeUsers.toLocaleString()}</span>
                 </div>
               </CardContent>
             </Card>
