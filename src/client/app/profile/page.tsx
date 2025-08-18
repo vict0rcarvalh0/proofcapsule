@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { User, Wallet, Settings, Shield, Download, Trash2, Bell, Globe, Lock, Key, Loader2 } from "lucide-react"
+import { User, Wallet, Settings, Shield, Download, Trash2, Bell, Globe, Lock, Key, Loader2, AlertTriangle, FileText, Share2, Eye } from "lucide-react"
 import { useAccount } from "wagmi"
-import { analyticsService, type UserAnalytics } from "@/lib/services"
+import { analyticsService, activityService, userService, type UserAnalytics, type ActivityItem } from "@/lib/services"
 import { formatDate } from "@/lib/utils/browser"
+import { toast } from "sonner"
 
 export default function ProfilePage() {
   const { address, isConnected } = useAccount()
@@ -15,10 +16,14 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [notifications, setNotifications] = useState(true)
   const [publicProfile, setPublicProfile] = useState(false)
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
+  const [activityLoading, setActivityLoading] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
-  // Load user stats on component mount
+  // Load user stats and activity on component mount
   useEffect(() => {
-    const loadUserStats = async () => {
+    const loadUserData = async () => {
       if (!isConnected || !address) {
         setLoading(false)
         return
@@ -26,24 +31,35 @@ export default function ProfilePage() {
 
       try {
         setLoading(true)
+        setActivityLoading(true)
         setError(null)
 
-        const response = await analyticsService.getUserStats(address)
+        // Load user stats
+        const statsResponse = await analyticsService.getUserStats(address)
         
-        if (response.success && response.data) {
-          setUserStats(response.data)
+        if (statsResponse.success && statsResponse.data) {
+          setUserStats(statsResponse.data)
         } else {
-          setError(response.error || 'Failed to load user stats')
+          setError(statsResponse.error || 'Failed to load user stats')
         }
+
+        // Load recent activity
+        const activityResponse = await activityService.getUserActivity(address, 5)
+        
+        if (activityResponse.success && activityResponse.data) {
+          setRecentActivity(activityResponse.data)
+        }
+
       } catch (error) {
-        console.error('Error loading user stats:', error)
-        setError('Failed to load user stats')
+        console.error('Error loading user data:', error)
+        setError('Failed to load user data')
       } finally {
         setLoading(false)
+        setActivityLoading(false)
       }
     }
 
-    loadUserStats()
+    loadUserData()
   }, [isConnected, address])
 
   const formatUserDate = (date: Date | null) => {
@@ -60,6 +76,72 @@ export default function ProfilePage() {
     const firstDate = new Date(userStats.firstCapsuleAt)
     const now = new Date()
     return Math.ceil((now.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  const handleExportData = async () => {
+    if (!address) return
+    
+    setExporting(true)
+    try {
+      const response = await userService.exportUserData(address)
+      
+      if (response.success && response.data) {
+        userService.downloadExportData(response.data, address)
+        toast.success('Data exported successfully!')
+      } else {
+        toast.error('Failed to export data', {
+          description: response.error
+        })
+      }
+    } catch (error) {
+      console.error('Error exporting data:', error)
+      toast.error('Failed to export data')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!address) return
+    
+    try {
+      const response = await userService.deleteAccount(address)
+      
+      if (response.success) {
+        toast.success('Account deleted successfully')
+        // Redirect to home page after deletion
+        window.location.href = '/'
+      } else {
+        toast.error('Failed to delete account', {
+          description: response.error
+        })
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error)
+      toast.error('Failed to delete account')
+    }
+  }
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'capsule':
+        return <FileText className="w-4 h-4 text-blue-500" />
+      case 'verification':
+        return <Eye className="w-4 h-4 text-green-500" />
+      default:
+        return <Bell className="w-4 h-4 text-muted-foreground" />
+    }
+  }
+
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'capsule':
+        return 'bg-blue-500'
+      case 'verification':
+        return 'bg-green-500'
+      default:
+        return 'bg-primary'
+    }
   }
 
   // Wallet connection is handled by wagmi
@@ -235,19 +317,44 @@ export default function ProfilePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export Data
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={handleExportData}
+                  disabled={exporting || !isConnected}
+                >
+                  {exporting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  {exporting ? 'Exporting...' : 'Export Data'}
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Key className="w-4 h-4 mr-2" />
-                  API Keys
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => window.open('/gallery', '_blank')}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Gallery
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Globe className="w-4 h-4 mr-2" />
-                  Connected Apps
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => window.open('/capture', '_blank')}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Create Capsule
                 </Button>
-                <Button variant="outline" className="w-full justify-start text-red-400 hover:text-red-300">
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-50"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={!isConnected}
+                >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete Account
                 </Button>
@@ -263,50 +370,73 @@ export default function ProfilePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Created "Sunset at Venice Beach"</p>
-                    <p className="text-xs text-muted-foreground">2 hours ago</p>
+                {activityLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary mr-2" />
+                    <span className="text-sm text-muted-foreground">Loading activity...</span>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Verified "Graduation Day"</p>
-                    <p className="text-xs text-muted-foreground">1 day ago</p>
+                ) : recentActivity.length > 0 ? (
+                  recentActivity.map((activity, index) => (
+                    <div key={index} className="flex items-start space-x-3">
+                      <div className={`w-2 h-2 ${getActivityColor(activity.type)} rounded-full mt-2`}></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {activity.action}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {activity.description}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(activity.timestamp.toString())}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <Bell className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No recent activity</p>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Shared "First Steps"</p>
-                    <p className="text-xs text-muted-foreground">3 days ago</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Support */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Need Help?</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full">
-                  Documentation
-                </Button>
-                <Button variant="outline" className="w-full">
-                  Contact Support
-                </Button>
-                <Button variant="outline" className="w-full">
-                  Community Discord
-                </Button>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-500 mr-3" />
+              <h3 className="text-lg font-semibold text-foreground">Delete Account</h3>
+            </div>
+            
+            <p className="text-muted-foreground mb-6">
+              This action will permanently delete your account and all associated Proof Capsules. 
+              This action cannot be undone.
+            </p>
+            
+            <div className="flex space-x-3">
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                className="flex-1"
+                onClick={handleDeleteAccount}
+              >
+                Delete Account
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

@@ -4,6 +4,8 @@ export { verificationService, type VerificationData, type VerificationWithCapsul
 export { analyticsService, type GlobalStats, type UserAnalytics } from './analytics'
 export { ipfsService, type IPFSMetadata, type IPFSUploadResult, type CapsuleMetadata } from './ipfs'
 export { useContractService, CONTRACT_ADDRESSES, type ContractService } from './contracts'
+export { activityService, type ActivityItem, type ActivityResponse } from './activity'
+export { userService, type ExportData, type UserResponse } from './user'
 
 // Re-export types for convenience
 export type { Capsule } from '@/lib/db/schema' 
