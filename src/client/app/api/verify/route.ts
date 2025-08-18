@@ -50,7 +50,14 @@ export async function POST(request: NextRequest) {
           id: capsule.id,
           tokenId: capsule.tokenId,
           description: capsule.description,
-          createdAt: capsule.createdAt
+          contentHash: capsule.contentHash,
+          location: capsule.location,
+          isPublic: capsule.isPublic,
+          createdAt: capsule.createdAt,
+          ipfsHash: capsule.ipfsHash,
+          blockNumber: capsule.blockNumber,
+          transactionHash: capsule.transactionHash,
+          gasUsed: capsule.gasUsed
         }
       }
     }, { status: 201 })
@@ -79,7 +86,14 @@ export async function GET(request: NextRequest) {
           id: capsules.id,
           tokenId: capsules.tokenId,
           description: capsules.description,
-          contentHash: capsules.contentHash
+          contentHash: capsules.contentHash,
+          location: capsules.location,
+          isPublic: capsules.isPublic,
+          createdAt: capsules.createdAt,
+          ipfsHash: capsules.ipfsHash,
+          blockNumber: capsules.blockNumber,
+          transactionHash: capsules.transactionHash,
+          gasUsed: capsules.gasUsed
         }
       })
       .from(verifications)

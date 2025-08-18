@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, Shield, CheckCircle, XCircle, Clock, Hash, FileText, MapPin, Calendar, Copy, ExternalLink } from "lucide-react"
+import { Search, Shield, CheckCircle, XCircle, Clock, Hash, FileText, MapPin, Calendar, Copy, ExternalLink, Link, Database, Globe } from "lucide-react"
 import { useAccount } from "wagmi"
 import { verificationService, type VerificationWithCapsule } from "@/lib/services"
 import { hashFile, formatDateLong } from "@/lib/utils/browser"
@@ -16,6 +16,7 @@ export default function VerifyPage() {
   const [verificationResult, setVerificationResult] = useState<VerificationWithCapsule | null>(null)
   const [fileHash, setFileHash] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [hasVerifiedOnce, setHasVerifiedOnce] = useState(false)
 
   const handleVerify = async () => {
     if (!hash.trim() || !isConnected || !address) {
@@ -33,6 +34,7 @@ export default function VerifyPage() {
       
       if (response.success && response.data) {
         setVerificationResult(response.data)
+        setHasVerifiedOnce(true)
         toast.success('Content verified successfully!', {
           description: `Token ID: #${response.data.capsule.tokenId}`
         })
@@ -67,6 +69,7 @@ export default function VerifyPage() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
+    toast.success('Copied to clipboard!')
   }
 
   // formatDateLong is now imported from browser utils
@@ -125,15 +128,20 @@ export default function VerifyPage() {
                   </div>
                 </div>
                 <Button
-                  variant="glow"
+                  variant={hasVerifiedOnce ? "outline" : "glow"}
                   className="w-full"
                   onClick={handleVerify}
-                  disabled={!hash.trim() || isVerifying}
+                  disabled={!hash.trim() || isVerifying || hasVerifiedOnce}
                 >
                   {isVerifying ? (
                     <div className="flex items-center">
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
                       Verifying...
+                    </div>
+                  ) : hasVerifiedOnce ? (
+                    <div className="flex items-center">
+                      <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
+                      Already Verified
                     </div>
                   ) : (
                     <div className="flex items-center">
@@ -176,7 +184,7 @@ export default function VerifyPage() {
                 {fileHash && (
                   <div className="p-3 bg-muted/20 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-1">File Hash:</p>
-                    <p className="text-sm font-mono text-foreground">{fileHash}</p>
+                    <p className="text-sm font-mono text-foreground break-all">{fileHash}</p>
                   </div>
                 )}
               </CardContent>
@@ -199,49 +207,206 @@ export default function VerifyPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-3">
+                  <div className="space-y-4">
+                    {/* Basic Information */}
                     <div>
-                      <h4 className="font-medium text-foreground mb-1">Capsule ID</h4>
-                      <p className="text-sm text-muted-foreground">#{verificationResult.capsule.tokenId}</p>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium text-foreground mb-1">Description</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {verificationResult.capsule.description || "No description provided"}
-                      </p>
+                      <h4 className="font-medium text-foreground mb-2">Capsule Information</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <span className="text-sm text-muted-foreground">Capsule ID:</span>
+                          <p className="text-sm font-mono text-foreground mt-1">#{verificationResult.capsule.tokenId}</p>
+                        </div>
+                        
+                        <div>
+                          <span className="text-sm text-muted-foreground">Description:</span>
+                          <p className="text-sm text-foreground mt-1">
+                            {verificationResult.capsule.description || "No description provided"}
+                          </p>
+                        </div>
+
+                        {verificationResult.capsule.location && (
+                          <div>
+                            <span className="text-sm text-muted-foreground">Location:</span>
+                            <p className="text-sm text-foreground mt-1 flex items-center">
+                              <MapPin className="w-3 h-3 mr-1" />
+                              {verificationResult.capsule.location}
+                            </p>
+                          </div>
+                        )}
+
+                        <div>
+                          <span className="text-sm text-muted-foreground">Created:</span>
+                          <p className="text-sm text-foreground mt-1 flex items-center">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {formatDateLong(verificationResult.capsule.createdAt.toString())}
+                          </p>
+                        </div>
+
+                        <div>
+                          <span className="text-sm text-muted-foreground">Visibility:</span>
+                          <p className="text-sm text-foreground mt-1">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              verificationResult.capsule.isPublic 
+                                ? 'bg-green-500/20 text-green-400' 
+                                : 'bg-orange-500/20 text-orange-400'
+                            }`}>
+                              {verificationResult.capsule.isPublic ? 'Public' : 'Private'}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
+                    {/* Content Hash */}
                     <div>
-                      <h4 className="font-medium text-foreground mb-1">Content Hash</h4>
-                      <p className="text-sm font-mono text-muted-foreground">
-                        {verificationResult.capsule.contentHash}
-                      </p>
+                      <h4 className="font-medium text-foreground mb-2">Content Hash</h4>
+                      <div className="p-3 bg-muted/20 rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-muted-foreground">SHA-256 Hash</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => copyToClipboard(verificationResult.capsule.contentHash)}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        <p className="text-sm font-mono text-foreground break-all">
+                          {verificationResult.capsule.contentHash}
+                        </p>
+                      </div>
                     </div>
 
+                    {/* Blockchain Information */}
+                    {verificationResult.capsule.transactionHash && (
+                      <div>
+                        <h4 className="font-medium text-foreground mb-2">Blockchain Information</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-sm text-muted-foreground">Transaction Hash:</span>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <p className="text-sm font-mono text-foreground break-all flex-1">
+                                {verificationResult.capsule.transactionHash}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => copyToClipboard(verificationResult.capsule.transactionHash!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => window.open(`https://explorer.testnet.soniclabs.com/tx/${verificationResult.capsule.transactionHash}`, '_blank')}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-sm text-muted-foreground">Block Number:</span>
+                            <p className="text-sm font-mono text-foreground mt-1">
+                              {verificationResult.capsule.blockNumber?.toLocaleString() || 'N/A'}
+                            </p>
+                          </div>
+
+                          <div>
+                            <span className="text-sm text-muted-foreground">Gas Used:</span>
+                            <p className="text-sm font-mono text-foreground mt-1">
+                              {verificationResult.capsule.gasUsed?.toLocaleString() || 'N/A'} gas
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* IPFS Information */}
+                    {verificationResult.capsule.ipfsHash && (
+                      <div>
+                        <h4 className="font-medium text-foreground mb-2">IPFS Information</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-sm text-muted-foreground">IPFS Hash:</span>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <p className="text-sm font-mono text-foreground break-all flex-1">
+                                {verificationResult.capsule.ipfsHash}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => copyToClipboard(verificationResult.capsule.ipfsHash!)}
+                              >
+                                <Copy className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => window.open(`https://gateway.pinata.cloud/ipfs/${verificationResult.capsule.ipfsHash}`, '_blank')}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Verification Details */}
                     <div>
-                      <h4 className="font-medium text-foreground mb-1">Verification Details</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Verified by:</span>
-                          <span className="font-mono">{verificationResult.verification.verifierAddress}</span>
+                      <h4 className="font-medium text-foreground mb-2">Verification Details</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <span className="text-sm text-muted-foreground">Verified by:</span>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <p className="text-sm font-mono text-foreground break-all flex-1">
+                              {verificationResult.verification.verifierAddress}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => copyToClipboard(verificationResult.verification.verifierAddress)}
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Method:</span>
-                          <span className="font-mono">{verificationResult.verification.verificationMethod}</span>
+                        
+                        <div>
+                          <span className="text-sm text-muted-foreground">Method:</span>
+                          <p className="text-sm font-mono text-foreground mt-1">
+                            {verificationResult.verification.verificationMethod}
+                          </p>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Verified at:</span>
-                                                     <span className="font-mono">
-                             {formatDateLong(verificationResult.verification.verifiedAt.toString())}
-                           </span>
+                        
+                        <div>
+                          <span className="text-sm text-muted-foreground">Verified at:</span>
+                          <p className="text-sm font-mono text-foreground mt-1">
+                            {formatDateLong(verificationResult.verification.verifiedAt.toString())}
+                          </p>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="pt-4 border-t border-border">
-                    <Button variant="outline" className="w-full" onClick={() => setVerificationResult(null)}>
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => {
+                        setVerificationResult(null)
+                        setHasVerifiedOnce(false)
+                        setHash("")
+                        setFileHash("")
+                      }}
+                    >
                       Verify Another
                     </Button>
                   </div>

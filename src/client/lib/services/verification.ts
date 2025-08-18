@@ -15,6 +15,13 @@ export interface VerificationWithCapsule {
     tokenId: number
     description: string | null
     contentHash: string
+    location: string | null
+    isPublic: boolean
+    createdAt: Date
+    ipfsHash: string | null
+    blockNumber: number | null
+    transactionHash: string | null
+    gasUsed: number | null
   }
 }
 
