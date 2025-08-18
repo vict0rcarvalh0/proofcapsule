@@ -7,6 +7,7 @@ import { Camera, Upload, FileText, MapPin, Calendar, Hash, Shield, Zap, External
 import { useAccount } from "wagmi"
 import { capsulesService, analyticsService, ipfsService, useContractService, type CreateCapsuleData } from "@/lib/services"
 import { hashFile } from "@/lib/utils/browser"
+import { toast } from "sonner"
 
 export default function CapturePage() {
   const { address, isConnected } = useAccount()
@@ -89,6 +90,7 @@ export default function CapturePage() {
         throw new Error('IPFS credentials are invalid. Please check your Pinata API keys.')
       }
       console.log('IPFS credentials are valid!')
+      toast.success('IPFS connection verified!')
 
       // Step 3: Upload files to IPFS
       const ipfsResults = await Promise.all(
@@ -114,6 +116,7 @@ export default function CapturePage() {
       const metadataResult = await ipfsService.uploadMetadata(metadata)
       const metadataIpfsHash = metadataResult.IpfsHash
       console.log('Metadata uploaded to IPFS:', metadataIpfsHash)
+      toast.success('Metadata uploaded to IPFS!')
       
       setUploadProgress(60)
 
@@ -133,6 +136,9 @@ export default function CapturePage() {
       
       setTransactionHash(txHash)
       console.log('Transaction hash:', txHash)
+      toast.success('NFT minted successfully!', {
+        description: `Transaction: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`
+      })
       
       // Step 5: Wait for transaction confirmation
       const receipt = await contractService.waitForTransaction(txHash)
@@ -184,9 +190,16 @@ export default function CapturePage() {
       }
       
       console.log('Capsule created successfully:', response.data)
+      toast.success('Proof Capsule created successfully!', {
+        description: `Token ID: #${actualTokenId}`
+      })
     } catch (error) {
       console.error('Error creating capsule:', error)
-      setError(error instanceof Error ? error.message : 'Failed to create capsule')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create capsule'
+      setError(errorMessage)
+      toast.error('Failed to create capsule', {
+        description: errorMessage
+      })
     } finally {
       setIsUploading(false)
       setUploadProgress(0)

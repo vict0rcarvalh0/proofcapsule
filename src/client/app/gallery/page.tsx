@@ -7,6 +7,7 @@ import { Images, Search, Filter, Calendar, MapPin, Hash, Eye, Share2, Download, 
 import { useAccount } from "wagmi"
 import { capsulesService, ipfsService, type Capsule } from "@/lib/services"
 import { formatDate, truncateHash, copyToClipboard } from "@/lib/utils/browser"
+import { toast } from "sonner"
 
 // Mock data for demonstration
 const mockCapsules = [
@@ -126,15 +127,16 @@ export default function GalleryPage() {
       } catch (error) {
         console.log('Share cancelled or failed')
       }
-    } else {
-      // Fallback to copying to clipboard
-      try {
-        await copyToClipboard(shareUrl)
-        alert('Share URL copied to clipboard!')
-      } catch (error) {
-        console.error('Failed to copy to clipboard:', error)
+          } else {
+        // Fallback to copying to clipboard
+        try {
+          await copyToClipboard(shareUrl)
+          toast.success('Share URL copied to clipboard!')
+        } catch (error) {
+          console.error('Failed to copy to clipboard:', error)
+          toast.error('Failed to copy to clipboard')
+        }
       }
-    }
   }
 
   const handleDownloadCapsule = async (capsule: Capsule) => {
@@ -169,10 +171,12 @@ export default function GalleryPage() {
           a.click()
           document.body.removeChild(a)
           URL.revokeObjectURL(url)
+          toast.success('Capsule metadata downloaded!')
           return
         }
       } catch (error) {
         console.error('Failed to fetch IPFS metadata:', error)
+        toast.error('Failed to download metadata')
       }
     }
 
@@ -199,16 +203,19 @@ export default function GalleryPage() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+    toast.success('Capsule data downloaded!')
   }
 
   const handleCopyHash = async (hash: string) => {
     setCopyingHash(hash)
     try {
       await copyToClipboard(hash)
+      toast.success('Hash copied to clipboard!')
       setTimeout(() => setCopyingHash(null), 2000)
     } catch (error) {
       console.error('Failed to copy hash:', error)
       setCopyingHash(null)
+      toast.error('Failed to copy hash')
     }
   }
 
@@ -272,7 +279,7 @@ export default function GalleryPage() {
             <select
               value={viewMode}
               onChange={(e) => setViewMode(e.target.value as "all" | "public" | "private")}
-              className="px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="px-4 py-3 pr-10 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="all">All Capsules</option>
               <option value="public">Public Only</option>
@@ -283,7 +290,7 @@ export default function GalleryPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="px-4 py-3 pr-10 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -358,12 +365,10 @@ export default function GalleryPage() {
                       <Calendar className="w-4 h-4 mr-2" />
                       {formatDate(capsule.createdAt.toString())}
                     </div>
-                    {capsule.location && (
-                      <div className="flex items-center text-muted-foreground">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        {capsule.location}
-                      </div>
-                    )}
+                    <div className="flex items-center text-muted-foreground">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      {capsule.location || "No location"}
+                    </div>
                     <div className="flex items-center text-muted-foreground">
                       <Hash className="w-4 h-4 mr-2" />
                       <span className="flex-1">{truncateHash(capsule.contentHash)}</span>
@@ -459,8 +464,8 @@ export default function GalleryPage() {
         {/* View Modal */}
         {showViewModal && selectedCapsule && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-background rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
+            <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+              <div className="p-6 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-foreground">
                     Capsule #{selectedCapsule.tokenId}
@@ -474,7 +479,7 @@ export default function GalleryPage() {
                   </Button>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-6 flex-1 overflow-y-auto">
                   {/* Description */}
                   <div>
                     <h3 className="font-semibold text-foreground mb-2">Description</h3>
@@ -484,7 +489,7 @@ export default function GalleryPage() {
                   </div>
 
                   {/* Metadata */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div>
                       <h3 className="font-semibold text-foreground mb-2">Created</h3>
                       <p className="text-muted-foreground">
@@ -567,7 +572,7 @@ export default function GalleryPage() {
                   )}
 
                   {/* Actions */}
-                  <div className="flex items-center space-x-2 pt-4 border-t border-border">
+                  <div className="flex items-center space-x-2 pt-4 border-t border-border mt-6">
                     <Button 
                       variant="outline" 
                       className="flex-1"

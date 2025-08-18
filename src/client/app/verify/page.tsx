@@ -7,6 +7,7 @@ import { Search, Shield, CheckCircle, XCircle, Clock, Hash, FileText, MapPin, Ca
 import { useAccount } from "wagmi"
 import { verificationService, type VerificationWithCapsule } from "@/lib/services"
 import { hashFile, formatDateLong } from "@/lib/utils/browser"
+import { toast } from "sonner"
 
 export default function VerifyPage() {
   const { address, isConnected } = useAccount()
@@ -32,8 +33,15 @@ export default function VerifyPage() {
       
       if (response.success && response.data) {
         setVerificationResult(response.data)
+        toast.success('Content verified successfully!', {
+          description: `Token ID: #${response.data.capsule.tokenId}`
+        })
       } else {
-        setError(response.error || 'Capsule not found')
+        const errorMsg = response.error || 'Capsule not found'
+        setError(errorMsg)
+        toast.error('Verification failed', {
+          description: errorMsg
+        })
       }
     } catch (error) {
       console.error('Error verifying capsule:', error)

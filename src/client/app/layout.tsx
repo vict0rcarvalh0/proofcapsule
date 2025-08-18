@@ -5,6 +5,7 @@ import { Navigation } from "@/components/navigation"
 import { Bubbles } from "@/components/bubbles"
 import { Footer } from "@/components/footer"
 import { WagmiWrapper } from "@/components/providers/wagmi-provider"
+import { Toaster } from "sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -30,6 +31,13 @@ export default function RootLayout({
             </main>
             <Footer />
           </div>
+          <Toaster 
+            position="top-right"
+            closeButton
+            duration={4000}
+            theme="dark"
+            className="!bg-background !border-border !text-foreground"
+          />
         </WagmiWrapper>
       </body>
     </html>
