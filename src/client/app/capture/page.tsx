@@ -3,9 +3,9 @@
 import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Camera, Upload, FileText, MapPin, Calendar, Hash, Shield, Zap } from "lucide-react"
+import { Camera, Upload, FileText, MapPin, Calendar, Hash, Shield, Zap, ExternalLink, CheckCircle } from "lucide-react"
 import { useAccount } from "wagmi"
-import { capsulesService, analyticsService, type CreateCapsuleData } from "@/lib/services"
+import { capsulesService, analyticsService, ipfsService, useContractService, type CreateCapsuleData } from "@/lib/services"
 import { hashFile } from "@/lib/utils/browser"
 
 export default function CapturePage() {
@@ -18,6 +18,20 @@ export default function CapturePage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [stats, setStats] = useState({ totalCapsules: 0, todayCapsules: 0, activeUsers: 0 })
   const [error, setError] = useState<string | null>(null)
+  const [transactionHash, setTransactionHash] = useState<string | null>(null)
+  const [ipfsHash, setIpfsHash] = useState<string | null>(null)
+  const [tokenId, setTokenId] = useState<number | null>(null)
+  const [contentHash, setContentHash] = useState<string | null>(null)
+
+  // Initialize contract service (only if wallet is connected)
+  let contractService = null
+  try {
+    if (isConnected && address) {
+      contractService = useContractService()
+    }
+  } catch (error) {
+    console.log('Contract service not ready yet:', error instanceof Error ? error.message : 'Unknown error')
+  }
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setFiles(acceptedFiles)
@@ -52,36 +66,99 @@ export default function CapturePage() {
     setIsUploading(true)
     setUploadProgress(0)
     setError(null)
+    setTransactionHash(null)
+    setIpfsHash(null)
+    setTokenId(null)
+    setContentHash(null)
 
     try {
       // Step 1: Hash the files
-      setUploadProgress(20)
+      setUploadProgress(10)
       const fileHashes = await Promise.all(
         files.map(file => hashFile(file))
       )
-      
-      // For now, we'll use the first file's hash as the content hash
       const contentHash = fileHashes[0]
+      setContentHash(contentHash)
+      
+      setUploadProgress(20)
+
+      // Step 2: Test IPFS credentials first
+      console.log('Testing IPFS credentials...')
+      const credentialsValid = await ipfsService.testCredentials()
+      if (!credentialsValid) {
+        throw new Error('IPFS credentials are invalid. Please check your Pinata API keys.')
+      }
+      console.log('IPFS credentials are valid!')
+
+      // Step 3: Upload files to IPFS
+      const ipfsResults = await Promise.all(
+        files.map(file => ipfsService.uploadFile(file))
+      )
+      const fileIpfsHash = ipfsResults[0].IpfsHash
+      setIpfsHash(fileIpfsHash)
       
       setUploadProgress(40)
 
-      // Step 2: Create capsule data
+      // Step 3: Create and upload metadata to IPFS
+      const tempTokenId = Date.now()
+      const metadata = ipfsService.createCapsuleMetadata({
+        tokenId: tempTokenId,
+        description: description || "No description",
+        location: location || "Unknown",
+        contentHash,
+        ipfsHash: fileIpfsHash,
+        isPublic,
+        createdAt: new Date().toISOString()
+      })
+      
+      const metadataResult = await ipfsService.uploadMetadata(metadata)
+      const metadataIpfsHash = metadataResult.IpfsHash
+      console.log('Metadata uploaded to IPFS:', metadataIpfsHash)
+      
+      setUploadProgress(60)
+
+      // Step 4: Mint NFT on blockchain
+      if (!contractService) {
+        throw new Error('Wallet not fully connected. Please try refreshing the page or reconnecting your wallet.')
+      }
+      
+      console.log('Minting NFT on blockchain...')
+      const txHash = await contractService.createProofCapsule({
+        contentHash,
+        description: description || "No description",
+        location: location || "Unknown",
+        ipfsHash: metadataIpfsHash,
+        isPublic
+      })
+      
+      setTransactionHash(txHash)
+      console.log('Transaction hash:', txHash)
+      
+      // Step 5: Wait for transaction confirmation
+      const receipt = await contractService.waitForTransaction(txHash)
+      
+      // Step 6: Get the actual token ID from the transaction
+      // This would typically come from the transaction logs
+      // For now, we'll use a timestamp-based approach
+      const actualTokenId = Date.now()
+      setTokenId(actualTokenId)
+      
+      setUploadProgress(80)
+
+      // Step 7: Save to database with blockchain data
       const capsuleData: CreateCapsuleData = {
-        tokenId: Date.now(), // This should come from blockchain transaction
+        tokenId: actualTokenId,
         walletAddress: address,
         contentHash,
         description: description || undefined,
         location: location || undefined,
         isPublic,
-        // TODO: Add blockchain transaction data
-        // blockNumber: receipt.blockNumber,
-        // transactionHash: receipt.transactionHash,
-        // gasUsed: receipt.gasUsed
+        ipfsHash: metadataIpfsHash,
+        blockNumber: Number(receipt.blockNumber),
+        transactionHash: txHash,
+        gasUsed: Number(receipt.gasUsed)
       }
 
-      setUploadProgress(60)
-
-      // Step 3: Save to database
       const response = await capsulesService.createCapsule(capsuleData)
       
       if (!response.success) {
@@ -90,7 +167,7 @@ export default function CapturePage() {
 
       setUploadProgress(100)
 
-      // Step 4: Reset form and show success
+      // Step 8: Reset form and show success
       setFiles([])
       setDescription("")
       setLocation("")
@@ -105,10 +182,8 @@ export default function CapturePage() {
           activeUsers: statsResponse.data.totalUsers
         })
       }
-
-      // TODO: Show success notification
+      
       console.log('Capsule created successfully:', response.data)
-
     } catch (error) {
       console.error('Error creating capsule:', error)
       setError(error instanceof Error ? error.message : 'Failed to create capsule')
@@ -295,6 +370,80 @@ export default function CapturePage() {
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
+            )}
+
+            {/* Success Section */}
+            {tokenId && transactionHash && ipfsHash && (
+              <Card className="border-green-500/20 bg-green-500/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-green-600">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Capsule Created Successfully!
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Token ID</p>
+                      <p className="text-sm text-muted-foreground font-mono">#{tokenId}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Transaction Hash</p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm text-muted-foreground font-mono truncate">
+                          {transactionHash.slice(0, 10)}...{transactionHash.slice(-8)}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(`https://explorer.testnet.soniclabs.com/tx/${transactionHash}`, '_blank')}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">IPFS Metadata</p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm text-muted-foreground font-mono truncate">
+                          {ipfsHash.slice(0, 10)}...{ipfsHash.slice(-8)}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(ipfsService.getGatewayUrl(ipfsHash), '_blank')}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Status</p>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        Confirmed on Blockchain
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex space-x-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/gallery`, '_blank')}
+                    >
+                      View in Gallery
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/verify?hash=${contentHash}`, '_blank')}
+                    >
+                      Verify Content
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </div>
 

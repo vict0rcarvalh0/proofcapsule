@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Images, Search, Filter, Calendar, MapPin, Hash, Eye, Share2, Download, Loader2 } from "lucide-react"
+import { Images, Search, Filter, Calendar, MapPin, Hash, Eye, Share2, Download, Loader2, ExternalLink, Copy } from "lucide-react"
 import { useAccount } from "wagmi"
-import { capsulesService, type Capsule } from "@/lib/services"
-import { formatDate, truncateHash } from "@/lib/utils/browser"
+import { capsulesService, ipfsService, type Capsule } from "@/lib/services"
+import { formatDate, truncateHash, copyToClipboard } from "@/lib/utils/browser"
 
 // Mock data for demonstration
 const mockCapsules = [
@@ -61,6 +61,9 @@ export default function GalleryPage() {
   const [filterType, setFilterType] = useState("all")
   const [sortBy, setSortBy] = useState("newest")
   const [viewMode, setViewMode] = useState<"all" | "public" | "private">("all")
+  const [selectedCapsule, setSelectedCapsule] = useState<Capsule | null>(null)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [copyingHash, setCopyingHash] = useState<string | null>(null)
 
   // Load capsules on component mount
   useEffect(() => {
@@ -98,6 +101,123 @@ export default function GalleryPage() {
 
     loadCapsules()
   }, [isConnected, address, viewMode])
+
+  // Handler functions for capsule actions
+  const handleViewCapsule = (capsule: Capsule) => {
+    setSelectedCapsule(capsule)
+    setShowViewModal(true)
+  }
+
+  const handleShareCapsule = async (capsule: Capsule) => {
+    // Use IPFS metadata URL if available, otherwise fallback to verification page
+    const shareUrl = capsule.ipfsHash 
+      ? ipfsService.getGatewayUrl(capsule.ipfsHash)
+      : `${window.location.origin}/verify?hash=${capsule.contentHash}`
+    
+    const shareText = `Check out this ProofCapsule: ${capsule.description || 'Capsule'} #${capsule.tokenId}`
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `ProofCapsule #${capsule.tokenId}`,
+          text: shareText,
+          url: shareUrl
+        })
+      } catch (error) {
+        console.log('Share cancelled or failed')
+      }
+    } else {
+      // Fallback to copying to clipboard
+      try {
+        await copyToClipboard(shareUrl)
+        alert('Share URL copied to clipboard!')
+      } catch (error) {
+        console.error('Failed to copy to clipboard:', error)
+      }
+    }
+  }
+
+  const handleDownloadCapsule = async (capsule: Capsule) => {
+    // If IPFS hash is available, download from IPFS
+    if (capsule.ipfsHash) {
+      try {
+        const response = await fetch(ipfsService.getGatewayUrl(capsule.ipfsHash))
+        if (response.ok) {
+          const metadata = await response.json()
+          
+          // Create enhanced JSON with both metadata and blockchain data
+          const capsuleData = {
+            ...metadata,
+            blockchainData: {
+              tokenId: capsule.tokenId,
+              contentHash: capsule.contentHash,
+              blockNumber: capsule.blockNumber,
+              transactionHash: capsule.transactionHash,
+              gasUsed: capsule.gasUsed,
+              createdAt: capsule.createdAt,
+              isPublic: capsule.isPublic
+            },
+            ipfsGateway: ipfsService.getGatewayUrls(capsule.ipfsHash)
+          }
+
+          const blob = new Blob([JSON.stringify(capsuleData, null, 2)], { type: 'application/json' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `proofcapsule-${capsule.tokenId}-metadata.json`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+          return
+        }
+      } catch (error) {
+        console.error('Failed to fetch IPFS metadata:', error)
+      }
+    }
+
+    // Fallback to local data if IPFS is not available
+    const capsuleData = {
+      id: capsule.id,
+      tokenId: capsule.tokenId,
+      contentHash: capsule.contentHash,
+      description: capsule.description,
+      location: capsule.location,
+      createdAt: capsule.createdAt,
+      isPublic: capsule.isPublic,
+      ipfsHash: capsule.ipfsHash,
+      blockNumber: capsule.blockNumber,
+      transactionHash: capsule.transactionHash
+    }
+
+    const blob = new Blob([JSON.stringify(capsuleData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `proofcapsule-${capsule.tokenId}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleCopyHash = async (hash: string) => {
+    setCopyingHash(hash)
+    try {
+      await copyToClipboard(hash)
+      setTimeout(() => setCopyingHash(null), 2000)
+    } catch (error) {
+      console.error('Failed to copy hash:', error)
+      setCopyingHash(null)
+    }
+  }
+
+  const handleViewOnExplorer = (capsule: Capsule) => {
+    if (capsule.transactionHash) {
+      const explorerUrl = `https://explorer.testnet.soniclabs.com/tx/${capsule.transactionHash}`
+      window.open(explorerUrl, '_blank')
+    }
+  }
 
   const filteredCapsules = capsules.filter(capsule => {
     const matchesSearch = searchTerm === "" || 
@@ -211,10 +331,20 @@ export default function GalleryPage() {
                       </CardDescription>
                     </div>
                     <div className="flex items-center space-x-2 ml-4">
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleViewCapsule(capsule)}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleShareCapsule(capsule)}
+                      >
                         <Share2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -236,7 +366,19 @@ export default function GalleryPage() {
                     )}
                     <div className="flex items-center text-muted-foreground">
                       <Hash className="w-4 h-4 mr-2" />
-                      {truncateHash(capsule.contentHash)}
+                      <span className="flex-1">{truncateHash(capsule.contentHash)}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-4 w-4 ml-1"
+                        onClick={() => handleCopyHash(capsule.contentHash)}
+                      >
+                        {copyingHash === capsule.contentHash ? (
+                          <div className="w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </Button>
                     </div>
                   </div>
 
@@ -256,15 +398,29 @@ export default function GalleryPage() {
 
                   {/* Actions */}
                   <div className="flex items-center space-x-2 pt-2 border-t border-border">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleViewCapsule(capsule)}
+                    >
                       <Eye className="w-4 h-4 mr-2" />
                       View
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleShareCapsule(capsule)}
+                    >
                       <Share2 className="w-4 h-4 mr-2" />
                       Share
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDownloadCapsule(capsule)}
+                    >
                       <Download className="w-4 h-4" />
                     </Button>
                   </div>
@@ -297,6 +453,148 @@ export default function GalleryPage() {
                 Connect Wallet
               </Button>
             )}
+          </div>
+        )}
+
+        {/* View Modal */}
+        {showViewModal && selectedCapsule && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-background rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-foreground">
+                    Capsule #{selectedCapsule.tokenId}
+                  </h2>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setShowViewModal(false)}
+                  >
+                    ×
+                  </Button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Description */}
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Description</h3>
+                    <p className="text-muted-foreground">
+                      {selectedCapsule.description || "No description provided"}
+                    </p>
+                  </div>
+
+                  {/* Metadata */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-2">Created</h3>
+                      <p className="text-muted-foreground">
+                        {formatDate(selectedCapsule.createdAt.toString())}
+                      </p>
+                    </div>
+                    {selectedCapsule.location && (
+                      <div>
+                        <h3 className="font-semibold text-foreground mb-2">Location</h3>
+                        <p className="text-muted-foreground">{selectedCapsule.location}</p>
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-2">Status</h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        selectedCapsule.isPublic ? "bg-green-500/20 text-green-400" : "bg-orange-500/20 text-orange-400"
+                      }`}>
+                        {selectedCapsule.isPublic ? "Public" : "Private"}
+                      </span>
+                    </div>
+                    {selectedCapsule.ipfsHash && (
+                      <div>
+                        <h3 className="font-semibold text-foreground mb-2">IPFS Hash</h3>
+                        <p className="text-muted-foreground font-mono text-sm">
+                          {selectedCapsule.ipfsHash}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Hash */}
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">Content Hash</h3>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-muted-foreground font-mono text-sm flex-1">
+                        {selectedCapsule.contentHash}
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleCopyHash(selectedCapsule.contentHash)}
+                      >
+                        {copyingHash === selectedCapsule.contentHash ? (
+                          <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Blockchain Data */}
+                  {selectedCapsule.transactionHash && (
+                    <div>
+                      <h3 className="font-semibold text-foreground mb-2">Blockchain Data</h3>
+                      <div className="space-y-2">
+                        {selectedCapsule.blockNumber && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Block Number:</span>
+                            <span className="font-mono text-sm">{selectedCapsule.blockNumber}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Transaction:</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="font-mono text-sm">
+                              {truncateHash(selectedCapsule.transactionHash)}
+                            </span>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleViewOnExplorer(selectedCapsule)}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex items-center space-x-2 pt-4 border-t border-border">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => handleShareCapsule(selectedCapsule)}
+                    >
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => handleDownloadCapsule(selectedCapsule)}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                    <Button 
+                      variant="glow"
+                      onClick={() => window.open(`/verify?hash=${selectedCapsule.contentHash}`, '_blank')}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Verify
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
