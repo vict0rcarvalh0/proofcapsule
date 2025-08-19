@@ -11,24 +11,23 @@ import "./ProofCapsuleNFT.sol";
  * Provides verification services, analytics, and batch operations
  */
 contract ProofCapsuleRegistry is Ownable, IERC721Receiver {
-
     ProofCapsuleNFT public immutable proofCapsuleNFT;
-    
+
     // Registry data
     mapping(address => uint256[]) public userCapsules;
     mapping(bytes32 => bool) public verifiedHashes;
     mapping(address => uint256) public userStats;
-    
+
     // Analytics
     uint256 public totalCapsulesCreated;
     uint256 public totalUniqueUsers;
     mapping(uint256 => uint256) public dailyCapsules; // timestamp => count
-    
+
     // Events
     event CapsuleRegistered(uint256 indexed tokenId, address indexed owner, bytes32 indexed contentHash);
     event HashVerified(bytes32 indexed contentHash, bool verified);
     event BatchCapsulesCreated(address indexed owner, uint256[] tokenIds);
-    
+
     // Structs
     struct CapsuleInfo {
         uint256 tokenId;
@@ -38,7 +37,7 @@ contract ProofCapsuleRegistry is Ownable, IERC721Receiver {
         string location;
         bool isPublic;
     }
-    
+
     struct UserStats {
         uint256 totalCapsules;
         uint256 publicCapsules;
@@ -59,20 +58,20 @@ contract ProofCapsuleRegistry is Ownable, IERC721Receiver {
      */
     function registerCapsule(uint256 tokenId, address owner, bytes32 contentHash) external {
         require(msg.sender == address(proofCapsuleNFT), "Only NFT contract can register");
-        
+
         // Add to user's capsule list
         userCapsules[owner].push(tokenId);
-        
+
         // Update user stats
         if (userStats[owner] == 0) {
             totalUniqueUsers++;
         }
         userStats[owner]++;
-        
+
         // Update global stats
         totalCapsulesCreated++;
         dailyCapsules[block.timestamp / 1 days]++;
-        
+
         emit CapsuleRegistered(tokenId, owner, contentHash);
     }
 
@@ -93,25 +92,19 @@ contract ProofCapsuleRegistry is Ownable, IERC721Receiver {
         bool[] calldata isPublic
     ) external returns (uint256[] memory tokenIds) {
         require(
-            contentHashes.length == descriptions.length &&
-            descriptions.length == locations.length &&
-            locations.length == ipfsHashes.length &&
-            ipfsHashes.length == isPublic.length,
+            contentHashes.length == descriptions.length && descriptions.length == locations.length
+                && locations.length == ipfsHashes.length && ipfsHashes.length == isPublic.length,
             "Array lengths must match"
         );
-        
+
         tokenIds = new uint256[](contentHashes.length);
-        
+
         for (uint256 i = 0; i < contentHashes.length; i++) {
             tokenIds[i] = proofCapsuleNFT.createProofCapsule(
-                contentHashes[i],
-                descriptions[i],
-                locations[i],
-                ipfsHashes[i],
-                isPublic[i]
+                contentHashes[i], descriptions[i], locations[i], ipfsHashes[i], isPublic[i]
             );
         }
-        
+
         emit BatchCapsulesCreated(msg.sender, tokenIds);
     }
 
@@ -133,7 +126,7 @@ contract ProofCapsuleRegistry is Ownable, IERC721Receiver {
     function getUserCapsules(address user) external view returns (CapsuleInfo[] memory capsules) {
         uint256[] memory tokenIds = userCapsules[user];
         capsules = new CapsuleInfo[](tokenIds.length);
-        
+
         for (uint256 i = 0; i < tokenIds.length; i++) {
             ProofCapsuleNFT.ProofCapsule memory capsule = proofCapsuleNFT.getCapsule(tokenIds[i]);
             capsules[i] = CapsuleInfo({
@@ -158,16 +151,16 @@ contract ProofCapsuleRegistry is Ownable, IERC721Receiver {
         uint256 privateCount = 0;
         uint256 firstTimestamp = type(uint256).max;
         uint256 lastTimestamp = 0;
-        
+
         for (uint256 i = 0; i < tokenIds.length; i++) {
             ProofCapsuleNFT.ProofCapsule memory capsule = proofCapsuleNFT.getCapsule(tokenIds[i]);
-            
+
             if (capsule.isPublic) {
                 publicCount++;
             } else {
                 privateCount++;
             }
-            
+
             if (capsule.timestamp < firstTimestamp) {
                 firstTimestamp = capsule.timestamp;
             }
@@ -175,7 +168,7 @@ contract ProofCapsuleRegistry is Ownable, IERC721Receiver {
                 lastTimestamp = capsule.timestamp;
             }
         }
-        
+
         stats = UserStats({
             totalCapsules: tokenIds.length,
             publicCapsules: publicCount,
@@ -191,7 +184,11 @@ contract ProofCapsuleRegistry is Ownable, IERC721Receiver {
      * @return totalUsers Total number of unique users
      * @return todayCapsules Number of capsules created today
      */
-    function getGlobalStats() external view returns (uint256 totalCapsules, uint256 totalUsers, uint256 todayCapsules) {
+    function getGlobalStats()
+        external
+        view
+        returns (uint256 totalCapsules, uint256 totalUsers, uint256 todayCapsules)
+    {
         totalCapsules = totalCapsulesCreated;
         totalUsers = totalUniqueUsers;
         todayCapsules = dailyCapsules[block.timestamp / 1 days];
@@ -241,12 +238,11 @@ contract ProofCapsuleRegistry is Ownable, IERC721Receiver {
      * @param data Additional data with no specified format
      * @return bytes4 `IERC721Receiver.onERC721Received.selector`
      */
-    function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    ) external override returns (bytes4) {
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
+        external
+        override
+        returns (bytes4)
+    {
         return IERC721Receiver.onERC721Received.selector;
     }
-} 
+}

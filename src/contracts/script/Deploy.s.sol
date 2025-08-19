@@ -12,23 +12,23 @@ import "../src/ProofCapsuleRegistry.sol";
 contract Deploy is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        
+
         vm.startBroadcast(deployerPrivateKey);
-        
+
         // Deploy ProofCapsuleNFT first
         ProofCapsuleNFT proofCapsuleNFT = new ProofCapsuleNFT();
         console.log("ProofCapsuleNFT deployed at:", address(proofCapsuleNFT));
-        
+
         // Deploy ProofCapsuleRegistry with NFT contract address
         ProofCapsuleRegistry registry = new ProofCapsuleRegistry(address(proofCapsuleNFT));
         console.log("ProofCapsuleRegistry deployed at:", address(registry));
-        
+
         // Set the registry in the NFT contract
         proofCapsuleNFT.setRegistry(address(registry));
         console.log("Registry set in NFT contract");
-        
+
         vm.stopBroadcast();
-        
+
         // Log deployment information
         console.log("\n=== ProofCapsule Deployment Complete ===");
         console.log("Network: Sonic Blaze Testnet");
@@ -37,4 +37,4 @@ contract Deploy is Script {
         console.log("Deployer:", vm.addr(deployerPrivateKey));
         console.log("========================================\n");
     }
-} 
+}

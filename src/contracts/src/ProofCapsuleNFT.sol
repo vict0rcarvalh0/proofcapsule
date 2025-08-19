@@ -16,16 +16,16 @@ contract ProofCapsuleNFT is ERC721, ERC721URIStorage, Ownable {
     using Strings for uint256;
 
     uint256 private _tokenIds;
-    
+
     // Mapping from token ID to capsule data
     mapping(uint256 => ProofCapsule) public capsules;
-    
+
     // Mapping from content hash to token ID (for verification)
     mapping(bytes32 => uint256) public hashToTokenId;
-    
+
     // Registry contract for additional functionality
     ProofCapsuleRegistry public registry;
-    
+
     // Events
     event ProofCapsuleCreated(
         uint256 indexed tokenId,
@@ -35,21 +35,21 @@ contract ProofCapsuleNFT is ERC721, ERC721URIStorage, Ownable {
         string description,
         string location
     );
-    
+
     event MetadataUpdated(uint256 indexed tokenId, string newURI);
 
     // Struct to store capsule data
     struct ProofCapsule {
-        bytes32 contentHash;      // Hash of the original content
-        uint256 timestamp;        // When the capsule was created
-        string description;       // Optional description
-        string location;          // Optional location
-        string ipfsHash;          // IPFS hash if content was uploaded
-        bool isPublic;            // Whether the content is publicly accessible
+        bytes32 contentHash; // Hash of the original content
+        uint256 timestamp; // When the capsule was created
+        string description; // Optional description
+        string location; // Optional location
+        string ipfsHash; // IPFS hash if content was uploaded
+        bool isPublic; // Whether the content is publicly accessible
     }
 
     constructor() ERC721("ProofCapsule", "PCAP") Ownable(msg.sender) {}
-    
+
     /**
      * @dev Sets the registry contract address
      * @param _registry The registry contract address
@@ -76,10 +76,10 @@ contract ProofCapsuleNFT is ERC721, ERC721URIStorage, Ownable {
     ) external returns (uint256) {
         require(contentHash != bytes32(0), "Content hash cannot be zero");
         require(hashToTokenId[contentHash] == 0, "Content hash already exists");
-        
+
         _tokenIds++;
         uint256 newTokenId = _tokenIds;
-        
+
         // Create the capsule data
         ProofCapsule memory newCapsule = ProofCapsule({
             contentHash: contentHash,
@@ -89,32 +89,25 @@ contract ProofCapsuleNFT is ERC721, ERC721URIStorage, Ownable {
             ipfsHash: ipfsHash,
             isPublic: isPublic
         });
-        
+
         // Store the capsule data
         capsules[newTokenId] = newCapsule;
         hashToTokenId[contentHash] = newTokenId;
-        
+
         // Mint the NFT to the caller
         _safeMint(msg.sender, newTokenId);
-        
+
         // Set the token URI
         string memory uri = _generateTokenURI(newTokenId, newCapsule);
         _setTokenURI(newTokenId, uri);
-        
-        emit ProofCapsuleCreated(
-            newTokenId,
-            msg.sender,
-            contentHash,
-            block.timestamp,
-            description,
-            location
-        );
-        
+
+        emit ProofCapsuleCreated(newTokenId, msg.sender, contentHash, block.timestamp, description, location);
+
         // Register with registry if set
         if (address(registry) != address(0)) {
             registry.registerCapsule(newTokenId, msg.sender, contentHash);
         }
-        
+
         return newTokenId;
     }
 
@@ -125,24 +118,21 @@ contract ProofCapsuleNFT is ERC721, ERC721URIStorage, Ownable {
      * @param location New location
      * @param isPublic New public status
      */
-    function updateCapsuleMetadata(
-        uint256 tokenId,
-        string memory description,
-        string memory location,
-        bool isPublic
-    ) external {
+    function updateCapsuleMetadata(uint256 tokenId, string memory description, string memory location, bool isPublic)
+        external
+    {
         require(_ownerOf(tokenId) != address(0), "Token does not exist");
         require(ownerOf(tokenId) == msg.sender, "Not the owner");
-        
+
         ProofCapsule storage capsule = capsules[tokenId];
         capsule.description = description;
         capsule.location = location;
         capsule.isPublic = isPublic;
-        
+
         // Update the token URI
         string memory uri = _generateTokenURI(tokenId, capsule);
         _setTokenURI(tokenId, uri);
-        
+
         emit MetadataUpdated(tokenId, uri);
     }
 
@@ -179,25 +169,43 @@ contract ProofCapsuleNFT is ERC721, ERC721URIStorage, Ownable {
      * @param capsule The capsule data
      * @return uri The generated URI
      */
-    function _generateTokenURI(uint256 tokenId, ProofCapsule memory capsule) 
-        internal 
-        pure 
-        returns (string memory) 
-    {
-        return string(abi.encodePacked(
-            "data:application/json;base64,",
-            _base64Encode(bytes(string(abi.encodePacked(
-                '{"name":"ProofCapsule #', tokenId.toString(), '",',
-                '"description":"', capsule.description, '",',
-                '"image":"ipfs://', capsule.ipfsHash, '",',
-                '"attributes":[',
-                '{"trait_type":"Timestamp","value":"', uint256(capsule.timestamp).toString(), '"},',
-                '{"trait_type":"Location","value":"', capsule.location, '"},',
-                '{"trait_type":"Content Hash","value":"', _bytes32ToString(capsule.contentHash), '"},',
-                '{"trait_type":"Public","value":"', capsule.isPublic ? "true" : "false", '"}',
-                ']}'
-            ))))
-        ));
+    function _generateTokenURI(uint256 tokenId, ProofCapsule memory capsule) internal pure returns (string memory) {
+        return string(
+            abi.encodePacked(
+                "data:application/json;base64,",
+                _base64Encode(
+                    bytes(
+                        string(
+                            abi.encodePacked(
+                                '{"name":"ProofCapsule #',
+                                tokenId.toString(),
+                                '",',
+                                '"description":"',
+                                capsule.description,
+                                '",',
+                                '"image":"ipfs://',
+                                capsule.ipfsHash,
+                                '",',
+                                '"attributes":[',
+                                '{"trait_type":"Timestamp","value":"',
+                                uint256(capsule.timestamp).toString(),
+                                '"},',
+                                '{"trait_type":"Location","value":"',
+                                capsule.location,
+                                '"},',
+                                '{"trait_type":"Content Hash","value":"',
+                                _bytes32ToString(capsule.contentHash),
+                                '"},',
+                                '{"trait_type":"Public","value":"',
+                                capsule.isPublic ? "true" : "false",
+                                '"}',
+                                "]}"
+                            )
+                        )
+                    )
+                )
+            )
+        );
     }
 
     /**
@@ -222,31 +230,31 @@ contract ProofCapsuleNFT is ERC721, ERC721URIStorage, Ownable {
         string memory table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         uint256 len = data.length;
         if (len == 0) return "";
-        
+
         uint256 encodedLen = 4 * ((len + 2) / 3);
         bytes memory result = new bytes(encodedLen);
-        
+
         uint256 i = 0;
         uint256 j = 0;
-        
+
         while (i < len) {
             uint256 a = i < len ? uint8(data[i++]) : 0;
             uint256 b = i < len ? uint8(data[i++]) : 0;
             uint256 c = i < len ? uint8(data[i++]) : 0;
-            
+
             uint256 triple = (a << 16) + (b << 8) + c;
-            
+
             result[j++] = bytes1(bytes(table)[triple >> 18 & 0x3F]);
             result[j++] = bytes1(bytes(table)[triple >> 12 & 0x3F]);
             result[j++] = bytes1(bytes(table)[triple >> 6 & 0x3F]);
             result[j++] = bytes1(bytes(table)[triple & 0x3F]);
         }
-        
+
         // Adjust padding
         while (j > 0 && result[j - 1] == "=") {
             j--;
         }
-        
+
         return string(result);
     }
 
@@ -258,4 +266,4 @@ contract ProofCapsuleNFT is ERC721, ERC721URIStorage, Ownable {
     function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
-} 
+}
