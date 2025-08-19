@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/server'
 import { analytics, userStats, capsules, users } from '@/lib/db/schema'
-import { eq, desc, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 // GET /api/analytics - Get platform analytics
 export async function GET(request: NextRequest) {
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     if (type === 'user') {
       // Get user-specific analytics
-      const [userStat] = await db
+      const [userStat] = await (db as any)
         .select()
         .from(userStats)
         .where(eq(userStats.walletAddress, walletAddress!))
@@ -54,17 +54,17 @@ export async function GET(request: NextRequest) {
       todayUsers
     ] = await Promise.all([
       // Total capsules
-      db.select({ count: sql<number>`count(*)` }).from(capsules),
+      (db as any).select({ count: sql<number>`count(*)` }).from(capsules),
       // Total users
-      db.select({ count: sql<number>`count(*)` }).from(users),
+      (db as any).select({ count: sql<number>`count(*)` }).from(users),
       // Total verifications
-      db.select({ count: sql<number>`count(*)` }).from(analytics),
+      (db as any).select({ count: sql<number>`count(*)` }).from(analytics),
       // Today's capsules
-      db.select({ count: sql<number>`count(*)` })
+      (db as any).select({ count: sql<number>`count(*)` })
         .from(capsules)
         .where(sql`date(created_at) = date('now')`),
       // Today's users
-      db.select({ count: sql<number>`count(*)` })
+      (db as any).select({ count: sql<number>`count(*)` })
         .from(users)
         .where(sql`date(created_at) = date('now')`)
     ])
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/analytics - Update daily analytics (called by cron job)
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
@@ -99,28 +99,28 @@ export async function POST(request: NextRequest) {
     const [
       totalCapsules,
       totalUsers,
-      newCapsules,
-      newUsers,
       totalVerifications
     ] = await Promise.all([
-      // Total capsules
-      db.select({ count: sql<number>`count(*)` }).from(capsules),
-      // Total users
-      db.select({ count: sql<number>`count(*)` }).from(users),
-      // New capsules today
-      db.select({ count: sql<number>`count(*)` })
-        .from(capsules)
-        .where(sql`date(created_at) = date('now')`),
-      // New users today
-      db.select({ count: sql<number>`count(*)` })
-        .from(users)
-        .where(sql`date(created_at) = date('now')`),
-      // Total verifications
-      db.select({ count: sql<number>`count(*)` }).from(analytics)
+      (db as any).select({ count: sql<number>`count(*)` }).from(capsules),
+      (db as any).select({ count: sql<number>`count(*)` }).from(users),
+      (db as any).select({ count: sql<number>`count(*)` }).from(analytics)
     ])
 
-    // Upsert today's analytics
-    await db
+    // Get new stats for today
+    const [
+      newCapsules,
+      newUsers
+    ] = await Promise.all([
+      (db as any).select({ count: sql<number>`count(*)` })
+        .from(capsules)
+        .where(sql`date(created_at) = date('now')`),
+      (db as any).select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(sql`date(created_at) = date('now')`)
+    ])
+
+    // Insert or update today's analytics
+    await (db as any)
       .insert(analytics)
       .values({
         date: today,
@@ -137,8 +137,7 @@ export async function POST(request: NextRequest) {
           totalUsers: totalUsers[0]?.count || 0,
           newCapsules: newCapsules[0]?.count || 0,
           newUsers: newUsers[0]?.count || 0,
-          totalVerifications: totalVerifications[0]?.count || 0,
-          createdAt: new Date()
+          totalVerifications: totalVerifications[0]?.count || 0
         }
       })
 

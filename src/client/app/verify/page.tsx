@@ -177,7 +177,7 @@ export default function VerifyPage() {
                       Drop file here or click to upload
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      We'll hash it and check for matches
+                      We&apos;ll hash it and check for matches
                     </p>
                   </label>
                 </div>
@@ -448,7 +448,7 @@ export default function VerifyPage() {
                   • Verify the timestamp and metadata are authentic
                 </p>
                 <p className="text-muted-foreground">
-                  • Confirm the content hasn't been tampered with
+                  • Confirm the content hasn&apos;t been tampered with
                 </p>
                 <p className="text-muted-foreground">
                   • Display the original creator and transaction details

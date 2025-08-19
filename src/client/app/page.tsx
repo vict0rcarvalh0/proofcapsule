@@ -22,7 +22,7 @@ export default function HomePage() {
               Moments
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-              Capture life's precious moments and immortalize them on the blockchain with cryptographic proof. 
+              Capture life&apos;s precious moments and immortalize them on the blockchain with cryptographic proof. 
               Your memories, achievements, and evidence are forever verifiable and censorship-resistant.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -151,7 +151,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-foreground mb-2">Personal Milestones</h3>
-                  <p className="text-muted-foreground">Weddings, graduations, first steps — immortalize life's precious moments with verifiable proof.</p>
+                  <p className="text-muted-foreground">Weddings, graduations, first steps — immortalize life&apos;s precious moments with verifiable proof.</p>
                 </div>
               </div>
 

@@ -1,15 +1,19 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Camera, Upload, FileText, MapPin, Calendar, Hash, Shield, Zap, ExternalLink, CheckCircle, Video, VideoOff, Navigation, Loader2 } from "lucide-react"
+import { Camera, FileText, MapPin, Hash, Shield, Zap, ExternalLink, CheckCircle, Video, VideoOff, Navigation, Loader2 } from "lucide-react"
 import { useAccount } from "wagmi"
 import { capsulesService, analyticsService, ipfsService, useContractService, type CreateCapsuleData } from "@/lib/services"
 import { hashFile } from "@/lib/utils/browser"
 import { toast } from "sonner"
+import dynamic from 'next/dynamic'
 
-export default function CapturePage() {
+// Disable SSR for this page to avoid wallet client issues
+const CapturePage = dynamic(() => Promise.resolve(CapturePageComponent), { ssr: false })
+
+function CapturePageComponent() {
   const { address, isConnected } = useAccount()
   
   // Camera and media states
@@ -41,6 +45,26 @@ export default function CapturePage() {
 
   // Initialize contract service
   const contractService = useContractService()
+
+  useEffect(() => {
+    // Load analytics on component mount
+    const loadAnalytics = async () => {
+      try {
+        const response = await analyticsService.getGlobalStats()
+        if (response.success && response.data) {
+          setStats({
+            totalCapsules: response.data.totalCapsules || 0,
+            todayCapsules: response.data.todayCapsules || 0,
+            activeUsers: response.data.totalUsers || 0
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load analytics:', error)
+      }
+    }
+
+    loadAnalytics()
+  }, [])
 
   // Camera functions
   const startCamera = async () => {
@@ -774,7 +798,7 @@ export default function CapturePage() {
                   <span className="text-sm font-medium text-foreground">{stats.totalCapsules.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Today's Captures</span>
+                  <span className="text-sm text-muted-foreground">Today&apos;s Captures</span>
                   <span className="text-sm font-medium text-foreground">{stats.todayCapsules.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
@@ -809,4 +833,6 @@ export default function CapturePage() {
       </div>
     </div>
   )
-} 
+}
+
+export default CapturePage 
