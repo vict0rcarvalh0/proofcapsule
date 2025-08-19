@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Camera, Upload, FileText, MapPin, Calendar, Hash, Shield, Zap, ExternalLink, CheckCircle } from "lucide-react"
+import { Camera, Upload, FileText, MapPin, Calendar, Hash, Shield, Zap, ExternalLink, CheckCircle, Video, VideoOff, Navigation, Loader2 } from "lucide-react"
 import { useAccount } from "wagmi"
 import { capsulesService, analyticsService, ipfsService, useContractService, type CreateCapsuleData } from "@/lib/services"
 import { hashFile } from "@/lib/utils/browser"
@@ -11,9 +11,24 @@ import { toast } from "sonner"
 
 export default function CapturePage() {
   const { address, isConnected } = useAccount()
-  const [files, setFiles] = useState<File[]>([])
+  
+  // Camera and media states
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [stream, setStream] = useState<MediaStream | null>(null)
+  const [isCameraActive, setIsCameraActive] = useState(false)
+  const [isCameraReady, setIsCameraReady] = useState(false)
+  const [capturedImage, setCapturedImage] = useState<string | null>(null)
+  const [capturedImageFile, setCapturedImageFile] = useState<File | null>(null)
+  
+  // Location states
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null)
+  const [locationAddress, setLocationAddress] = useState("")
+  const [isGettingLocation, setIsGettingLocation] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  
+  // Form states
   const [description, setDescription] = useState("")
-  const [location, setLocation] = useState("")
   const [isPublic, setIsPublic] = useState(true)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -34,14 +49,214 @@ export default function CapturePage() {
     console.log('Contract service not ready yet:', error instanceof Error ? error.message : 'Unknown error')
   }
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles(acceptedFiles)
-  }, [])
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files || [])
-    setFiles(selectedFiles)
+  // Camera functions
+  const startCamera = async () => {
+    try {
+      console.log('Starting camera...')
+      // Try to get back camera first, fallback to any camera
+      let mediaStream
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: 'environment', // Use back camera
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        })
+      } catch (error) {
+        console.log('Back camera not available, trying any camera...')
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        })
+      }
+      
+                    setStream(mediaStream)
+      setIsCameraActive(true)
+      
+      // Force the camera to work with a delay
+      setTimeout(() => {
+        if (videoRef.current) {
+          const video = videoRef.current
+          console.log('Force setting stream after delay...')
+          
+          // Clear any existing stream first
+          video.srcObject = null
+          video.load()
+          
+          // Set the stream
+          video.srcObject = mediaStream
+          console.log('Stream set:', video.srcObject)
+          
+          // Force load and play
+          video.load()
+          video.play().then(() => {
+            console.log('Video play successful')
+            setIsCameraReady(true)
+          }).catch((error) => {
+            console.error('Video play failed:', error)
+            // Check if video is ready anyway
+            if (video.readyState >= 2) {
+              console.log('Video ready despite play failure')
+              setIsCameraReady(true)
+            }
+          })
+        }
+      }, 500) // 500ms delay to ensure video element is ready
+      
+      toast.success('Camera activated!')
+    } catch (error) {
+      console.error('Error accessing camera:', error)
+      toast.error('Failed to access camera', {
+        description: 'Please allow camera permissions and try again.'
+      })
+    }
   }
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
+      setIsCameraActive(false)
+      setIsCameraReady(false)
+    }
+  }
+
+  const captureImage = () => {
+    console.log('Capture image called')
+    
+    if (!videoRef.current) {
+      console.error('Video ref not available')
+      toast.error('Camera not ready')
+      return
+    }
+    
+    if (!canvasRef.current) {
+      console.error('Canvas ref not available')
+      toast.error('Canvas not ready')
+      return
+    }
+    
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    
+    console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight)
+    console.log('Video ready state:', video.readyState)
+    
+    // Check if video is ready
+    if (video.readyState < 2) {
+      console.error('Video not ready yet')
+      toast.error('Camera not ready yet, please wait')
+      return
+    }
+    
+    const context = canvas.getContext('2d')
+    if (!context) {
+      console.error('Could not get canvas context')
+      toast.error('Failed to capture image')
+      return
+    }
+    
+    try {
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      
+      console.log('Canvas dimensions set to:', canvas.width, 'x', canvas.height)
+      
+      // Draw the video frame to canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      
+      console.log('Image drawn to canvas')
+      
+      // Convert to blob
+      canvas.toBlob((blob) => {
+        if (blob) {
+          console.log('Blob created, size:', blob.size)
+          const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })
+          setCapturedImageFile(file)
+          
+          // Also create data URL for preview
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+          setCapturedImage(dataUrl)
+          
+          // Turn off camera after capturing
+          stopCamera()
+          
+          console.log('Image captured successfully')
+          toast.success('Image captured! Camera turned off.')
+        } else {
+          console.error('Failed to create blob')
+          toast.error('Failed to capture image')
+        }
+      }, 'image/jpeg', 0.8)
+      
+    } catch (error) {
+      console.error('Error capturing image:', error)
+      toast.error('Failed to capture image')
+    }
+  }
+
+  // Location functions
+  const getCurrentLocation = async () => {
+    setIsGettingLocation(true)
+    setLocationError(null)
+    
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0 // Force fresh location
+        })
+      })
+
+      const { latitude, longitude } = position.coords
+      setCurrentLocation({ lat: latitude, lng: longitude })
+      
+      // Get address from coordinates
+      try {
+        const response = await fetch(
+          `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_OPENCAGE_API_KEY`
+        )
+        const data = await response.json()
+        
+        if (data.results && data.results[0]) {
+          const address = data.results[0].formatted
+          setLocationAddress(address)
+        } else {
+          setLocationAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`)
+        }
+      } catch (error) {
+        // Fallback to coordinates if geocoding fails
+        setLocationAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`)
+      }
+      
+      toast.success('Location captured!')
+    } catch (error) {
+      console.error('Error getting location:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get location'
+      setLocationError(errorMessage)
+      toast.error('Failed to get location', {
+        description: 'Please enable location permissions and try again.'
+      })
+    } finally {
+      setIsGettingLocation(false)
+    }
+  }
+
+
+
+
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera()
+    }
+  }, [])
 
   // Load stats on component mount
   useEffect(() => {
@@ -59,8 +274,13 @@ export default function CapturePage() {
   }, [])
 
   const handleCapture = async () => {
-    if (files.length === 0 || !isConnected || !address) {
-      setError("Please connect your wallet and select files")
+    if (!capturedImageFile || !isConnected || !address) {
+      setError("Please connect your wallet and capture an image")
+      return
+    }
+
+    if (!currentLocation) {
+      setError("Please capture your current location")
       return
     }
 
@@ -73,12 +293,9 @@ export default function CapturePage() {
     setContentHash(null)
 
     try {
-      // Step 1: Hash the files
+      // Step 1: Hash the captured image
       setUploadProgress(10)
-      const fileHashes = await Promise.all(
-        files.map(file => hashFile(file))
-      )
-      const contentHash = fileHashes[0]
+      const contentHash = await hashFile(capturedImageFile)
       setContentHash(contentHash)
       
       setUploadProgress(20)
@@ -92,21 +309,19 @@ export default function CapturePage() {
       console.log('IPFS credentials are valid!')
       toast.success('IPFS connection verified!')
 
-      // Step 3: Upload files to IPFS
-      const ipfsResults = await Promise.all(
-        files.map(file => ipfsService.uploadFile(file))
-      )
-      const fileIpfsHash = ipfsResults[0].IpfsHash
+      // Step 3: Upload captured image to IPFS
+      const ipfsResult = await ipfsService.uploadFile(capturedImageFile)
+      const fileIpfsHash = ipfsResult.IpfsHash
       setIpfsHash(fileIpfsHash)
       
       setUploadProgress(40)
 
-      // Step 3: Create and upload metadata to IPFS
+      // Step 4: Create and upload metadata to IPFS
       const tempTokenId = Date.now()
       const metadata = ipfsService.createCapsuleMetadata({
         tokenId: tempTokenId,
         description: description || "No description",
-        location: location || "Unknown",
+        location: locationAddress || `${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}`,
         contentHash,
         ipfsHash: fileIpfsHash,
         isPublic,
@@ -129,7 +344,7 @@ export default function CapturePage() {
       const txHash = await contractService.createProofCapsule({
         contentHash,
         description: description || "No description",
-        location: location || "Unknown",
+        location: locationAddress || `${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}`,
         ipfsHash: metadataIpfsHash,
         isPublic
       })
@@ -157,7 +372,7 @@ export default function CapturePage() {
         walletAddress: address,
         contentHash,
         description: description || undefined,
-        location: location || undefined,
+        location: locationAddress || `${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}`,
         isPublic,
         ipfsHash: metadataIpfsHash,
         blockNumber: Number(receipt.blockNumber),
@@ -174,9 +389,11 @@ export default function CapturePage() {
       setUploadProgress(100)
 
       // Step 8: Reset form and show success
-      setFiles([])
+      setCapturedImageFile(null)
+      setCapturedImage(null)
+      setCurrentLocation(null)
+      setLocationAddress("")
       setDescription("")
-      setLocation("")
       setIsPublic(true)
       
       // Refresh stats
@@ -224,64 +441,152 @@ export default function CapturePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Upload Area */}
+          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* File Upload */}
+            {/* Live Camera Capture */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Upload className="w-5 h-5 mr-2" />
-                  Upload Content
+                  <Camera className="w-5 h-5 mr-2" />
+                  Live Camera Capture
                 </CardTitle>
                 <CardDescription>
-                  Drag and drop files or click to browse. Supports images, videos, and text files.
+                  Capture a live image from your device camera. This ensures the moment is captured in real-time.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,video/*,.txt,.md,.pdf"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-lg font-medium text-foreground mb-2">
-                      Drop files here or click to upload
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      PNG, JPG, MP4, MOV, TXT, PDF up to 50MB
-                    </p>
-                  </label>
+              <CardContent className="space-y-4">
+                {/* Camera Controls */}
+                <div className="flex items-center space-x-4">
+                  {!isCameraActive ? (
+                    <Button onClick={startCamera} className="flex items-center">
+                      <Video className="w-4 h-4 mr-2" />
+                      Start Camera
+                    </Button>
+                  ) : (
+                    <div className="flex items-center space-x-4">
+                      <Button 
+                        onClick={captureImage} 
+                        variant="glow" 
+                        className="flex items-center"
+                        disabled={!isCameraReady}
+                      >
+                        <Camera className="w-4 h-4 mr-2" />
+                        {isCameraReady ? 'Capture Image' : 'Camera Loading...'}
+                      </Button>
+                      <Button onClick={stopCamera} variant="outline" className="flex items-center">
+                        <VideoOff className="w-4 h-4 mr-2" />
+                        Stop Camera
+                      </Button>
+
+                    </div>
+                  )}
                 </div>
 
-                {/* File Preview */}
-                {files.length > 0 && (
-                  <div className="mt-6 space-y-3">
-                    <h4 className="font-medium text-foreground">Selected Files:</h4>
-                    {files.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <FileText className="w-5 h-5 text-primary" />
-                          <div>
-                            <p className="font-medium text-foreground">{file.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setFiles(files.filter((_, i) => i !== index))}
-                        >
-                          Remove
-                        </Button>
+                {/* Camera Preview */}
+                {isCameraActive && (
+                  <div className="relative">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      controls={false}
+                      className="w-full h-64 object-cover rounded-lg border border-border"
+                      style={{ transform: 'scaleX(-1)' }} // Mirror the video for selfie-like experience
+                    />
+                    <canvas ref={canvasRef} className="hidden" />
+                    
+                    {/* Camera Status */}
+                    <div className="absolute top-2 left-2">
+                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        isCameraReady 
+                          ? 'bg-green-500/20 text-green-400' 
+                          : 'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {isCameraReady ? 'Ready' : 'Loading...'}
                       </div>
-                    ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Captured Image Preview */}
+                {capturedImage && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-foreground">Captured Image:</h4>
+                    <div className="relative">
+                      <img
+                        src={capturedImage}
+                        alt="Captured"
+                        className="w-full h-64 object-cover rounded-lg border border-border"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => {
+                          setCapturedImage(null)
+                          setCapturedImageFile(null)
+                        }}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Live Location Capture */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Navigation className="w-5 h-5 mr-2" />
+                  Live Location Capture
+                </CardTitle>
+                <CardDescription>
+                  Capture your current GPS location. This ensures the location is captured in real-time.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Location Controls */}
+                <div className="flex items-center space-x-4">
+                  <Button 
+                    onClick={getCurrentLocation} 
+                    disabled={isGettingLocation}
+                    className="flex items-center"
+                  >
+                    {isGettingLocation ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Navigation className="w-4 h-4 mr-2" />
+                    )}
+                    {isGettingLocation ? 'Getting Location...' : 'Capture Location'}
+                  </Button>
+                </div>
+
+                {/* Location Display */}
+                {currentLocation && (
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-foreground">Captured Location:</h4>
+                    <div className="p-3 bg-muted/20 rounded-lg">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <MapPin className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium text-foreground">Current Location</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {locationAddress || `${currentLocation.lat.toFixed(6)}, ${currentLocation.lng.toFixed(6)}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Coordinates: {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Location Error */}
+                {locationError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">{locationError}</p>
                   </div>
                 )}
               </CardContent>
@@ -307,25 +612,9 @@ export default function CapturePage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Describe this moment..."
-                                         className="w-full p-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="w-full p-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     rows={3}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Location (Optional)
-                  </label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="text"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      placeholder="Where was this captured?"
-                      className="w-full pl-10 pr-3 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    />
-                  </div>
                 </div>
 
                 <div>
@@ -353,7 +642,7 @@ export default function CapturePage() {
               size="lg"
               className="w-full h-14 text-lg"
               onClick={handleCapture}
-              disabled={files.length === 0 || isUploading}
+                              disabled={!capturedImageFile || !currentLocation || isUploading}
             >
               {isUploading ? (
                 <div className="flex items-center">
