@@ -46,13 +46,12 @@ export default function CapturePage() {
       contractService = useContractService()
     }
   } catch (error) {
-    console.log('Contract service not ready yet:', error instanceof Error ? error.message : 'Unknown error')
+    console.error('Contract service not ready yet:', error instanceof Error ? error.message : 'Unknown error')
   }
 
   // Camera functions
   const startCamera = async () => {
     try {
-      console.log('Starting camera...')
       // Try to get back camera first, fallback to any camera
       let mediaStream
       try {
@@ -64,7 +63,6 @@ export default function CapturePage() {
           }
         })
       } catch (error) {
-        console.log('Back camera not available, trying any camera...')
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             width: { ideal: 1920 },
@@ -80,7 +78,6 @@ export default function CapturePage() {
       setTimeout(() => {
         if (videoRef.current) {
           const video = videoRef.current
-          console.log('Force setting stream after delay...')
           
           // Clear any existing stream first
           video.srcObject = null
@@ -88,18 +85,15 @@ export default function CapturePage() {
           
           // Set the stream
           video.srcObject = mediaStream
-          console.log('Stream set:', video.srcObject)
           
           // Force load and play
           video.load()
           video.play().then(() => {
-            console.log('Video play successful')
             setIsCameraReady(true)
           }).catch((error) => {
             console.error('Video play failed:', error)
             // Check if video is ready anyway
             if (video.readyState >= 2) {
-              console.log('Video ready despite play failure')
               setIsCameraReady(true)
             }
           })
@@ -125,7 +119,6 @@ export default function CapturePage() {
   }
 
   const captureImage = () => {
-    console.log('Capture image called')
     
     if (!videoRef.current) {
       console.error('Video ref not available')
@@ -141,9 +134,6 @@ export default function CapturePage() {
     
     const video = videoRef.current
     const canvas = canvasRef.current
-    
-    console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight)
-    console.log('Video ready state:', video.readyState)
     
     // Check if video is ready
     if (video.readyState < 2) {
@@ -164,17 +154,12 @@ export default function CapturePage() {
       canvas.width = video.videoWidth
       canvas.height = video.videoHeight
       
-      console.log('Canvas dimensions set to:', canvas.width, 'x', canvas.height)
-      
       // Draw the video frame to canvas
       context.drawImage(video, 0, 0, canvas.width, canvas.height)
-      
-      console.log('Image drawn to canvas')
-      
+            
       // Convert to blob
       canvas.toBlob((blob) => {
         if (blob) {
-          console.log('Blob created, size:', blob.size)
           const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' })
           setCapturedImageFile(file)
           
@@ -185,7 +170,6 @@ export default function CapturePage() {
           // Turn off camera after capturing
           stopCamera()
           
-          console.log('Image captured successfully')
           toast.success('Image captured! Camera turned off.')
         } else {
           console.error('Failed to create blob')
@@ -293,20 +277,16 @@ export default function CapturePage() {
     setContentHash(null)
 
     try {
-      // Step 1: Hash the captured image
       setUploadProgress(10)
       const contentHash = await hashFile(capturedImageFile)
       setContentHash(contentHash)
       
       setUploadProgress(20)
 
-      // Step 2: Test IPFS credentials first
-      console.log('Testing IPFS credentials...')
       const credentialsValid = await ipfsService.testCredentials()
       if (!credentialsValid) {
         throw new Error('IPFS credentials are invalid. Please check your Pinata API keys.')
       }
-      console.log('IPFS credentials are valid!')
       toast.success('IPFS connection verified!')
 
       // Step 3: Upload captured image to IPFS
@@ -330,7 +310,6 @@ export default function CapturePage() {
       
       const metadataResult = await ipfsService.uploadMetadata(metadata)
       const metadataIpfsHash = metadataResult.IpfsHash
-      console.log('Metadata uploaded to IPFS:', metadataIpfsHash)
       toast.success('Metadata uploaded to IPFS!')
       
       setUploadProgress(60)
@@ -340,7 +319,6 @@ export default function CapturePage() {
         throw new Error('Wallet not fully connected. Please try refreshing the page or reconnecting your wallet.')
       }
       
-      console.log('Minting NFT on blockchain...')
       const txHash = await contractService.createProofCapsule({
         contentHash,
         description: description || "No description",
@@ -350,7 +328,6 @@ export default function CapturePage() {
       })
       
       setTransactionHash(txHash)
-      console.log('Transaction hash:', txHash)
       toast.success('NFT minted successfully!', {
         description: `Transaction: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`
       })
@@ -406,7 +383,6 @@ export default function CapturePage() {
         })
       }
       
-      console.log('Capsule created successfully:', response.data)
       toast.success('Proof Capsule created successfully!', {
         description: `Token ID: #${actualTokenId}`
       })

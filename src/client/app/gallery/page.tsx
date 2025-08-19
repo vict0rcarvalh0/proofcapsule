@@ -125,7 +125,7 @@ export default function GalleryPage() {
           url: shareUrl
         })
       } catch (error) {
-        console.log('Share cancelled or failed')
+        console.error('Share cancelled or failed')
       }
           } else {
         // Fallback to copying to clipboard

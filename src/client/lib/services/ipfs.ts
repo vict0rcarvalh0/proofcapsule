@@ -46,14 +46,6 @@ export class IPFSService {
     this.pinataApiKey = process.env.NEXT_PUBLIC_PINATA_API_KEY || ''
     this.pinataSecretApiKey = process.env.NEXT_PUBLIC_PINATA_SECRET_API_KEY || ''
     this.pinataJWT = process.env.NEXT_PUBLIC_PINATA_JWT || ''
-
-    console.log('Environment variables check:')
-    console.log('NEXT_PUBLIC_PINATA_API_KEY exists:', !!process.env.NEXT_PUBLIC_PINATA_API_KEY)
-    console.log('NEXT_PUBLIC_PINATA_SECRET_API_KEY exists:', !!process.env.NEXT_PUBLIC_PINATA_SECRET_API_KEY)
-    console.log('NEXT_PUBLIC_PINATA_JWT exists:', !!process.env.NEXT_PUBLIC_PINATA_JWT)
-    console.log('Pinata API key length:', this.pinataApiKey.length)
-    console.log('Pinata secret API key length:', this.pinataSecretApiKey.length)
-    console.log('Pinata JWT length:', this.pinataJWT.length)
   }
 
   // Upload file to IPFS
@@ -196,12 +188,6 @@ export class IPFSService {
           'pinata_api_key': this.pinataApiKey,
           'pinata_secret_api_key': this.pinataSecretApiKey
         }
-      })
-      
-      console.log('Credential test response:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
       })
       
       return response.ok
