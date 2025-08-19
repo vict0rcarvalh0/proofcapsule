@@ -2,10 +2,10 @@
 // This file should only be imported in API routes and server components
 
 import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { drizzle as drizzlePostgres } from 'drizzle-orm/vercel-postgres'
+import { drizzle as drizzleNeon } from 'drizzle-orm/neon-http'
 import { sql } from 'drizzle-orm'
 import Database from 'better-sqlite3'
-import { sql as postgresSql } from '@vercel/postgres'
+import { neon } from '@neondatabase/serverless'
 
 import * as schema from './schema'
 
@@ -15,8 +15,9 @@ const isProduction = process.env.NODE_ENV === 'production'
 let db: any
 
 if (isProduction) {
-  // Use Vercel Postgres in production
-  db = drizzlePostgres(postgresSql, { schema })
+  // Use Neon Postgres in production
+  const sql = neon(process.env.DATABASE_URL!)
+  db = drizzleNeon(sql, { schema })
 } else {
   // Use SQLite in development
   const sqlite = new Database('proofcapsule.db')
