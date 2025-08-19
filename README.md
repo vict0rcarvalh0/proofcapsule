@@ -28,14 +28,14 @@ ProofCapsule is a decentralized application that allows users to create timestam
 - **ERC-721 NFTs**: Standard NFT implementation
 - **Batch Operations**: Create multiple capsules efficiently
 - **User Statistics**: Track your capsule history
-- **Sonic Testnet**: Deployed on fast, low-cost network
+- **Sonic Mainnet**: Deployed on fast, low-cost network
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Node.js 18+ and npm
 - MetaMask or compatible wallet
-- Sonic Testnet tokens (get from [faucet](https://faucet.testnet.soniclabs.com))
+- Sonic (SONIC) tokens for gas fees
 
 ### Installation
 
@@ -76,7 +76,7 @@ Create a `.env` file in the `src/client` directory:
 ```env
 # Smart Contract Deployment
 PRIVATE_KEY=0x...
-RPC_URL=https://rpc.testnet.soniclabs.com
+RPC_URL=https://rpc.soniclabs.com
 ETHERSCAN_API_KEY=optional_for_verification
 NFT_ADDRESS=0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A
 REGISTRY_ADDRESS=0x45b1f38d1adfB5A9FFAA81b996a53bE78A33cF0c
@@ -93,7 +93,7 @@ NEXT_PUBLIC_PINATA_SECRET_API_KEY=your_pinata_secret_api_key_here
    - Generate API keys in your dashboard
    - Add to environment variables
 
-2. **Sonic Testnet Tokens**: Get free tokens from the [faucet](https://faucet.testnet.soniclabs.com)
+2. **Sonic Tokens**: Get SONIC tokens from exchanges or bridges for gas fees
 
 ## 📱 Usage
 
@@ -109,7 +109,7 @@ The process will:
 - Hash your files locally
 - Upload files to IPFS via Pinata
 - Create NFT metadata and upload to IPFS
-- Mint NFT on Sonic Testnet
+- Mint NFT on Sonic Mainnet
 - Store transaction data in database
 
 ### Viewing Your Capsules
@@ -143,7 +143,7 @@ The process will:
 ### Blockchain
 - **Solidity**: Smart contract language
 - **Foundry**: Development and testing framework
-- **Sonic Testnet**: Fast, low-cost testnet
+- **Sonic Mainnet**: Fast, low-cost mainnet
 - **ERC-721**: NFT standard implementation
 
 ### Storage
@@ -180,7 +180,7 @@ proofcapsule/
 
 ## 🔗 Smart Contracts
 
-### Deployed Addresses (Sonic Testnet)
+### Deployed Addresses (Sonic Mainnet)
 - **ProofCapsuleNFT**: `0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A`
 - **ProofCapsuleRegistry**: `0x45b1f38d1adfB5A9FFAA81b996a53bE78A33cF0c`
 
@@ -225,11 +225,11 @@ npm run test:integration
 
 ### Smart Contracts
 ```bash
-# Deploy to Sonic Testnet
+# Deploy to Sonic Mainnet
 ./scripts/deploy.sh
 
 # Verify contracts
-forge verify-contract --chain-id 14601
+forge verify-contract --chain-id 14600
 ```
 
 ## 🤝 Contributing
@@ -248,7 +248,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **OpenZeppelin**: Smart contract libraries
 - **Pinata**: IPFS pinning service
-- **Sonic Labs**: Testnet infrastructure
+- **Sonic Labs**: Mainnet infrastructure
 - **Vercel**: Hosting and deployment
 - **Next.js**: React framework
 - **Tailwind CSS**: Styling framework

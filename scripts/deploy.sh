@@ -1,93 +1,62 @@
 #!/bin/bash
 
-# ProofCapsule Deployment Script for Sonic Blaze Testnet
-# Usage: ./scripts/deploy.sh
+# ProofCapsule Smart Contract Deployment Script
+# Deploys to Sonic Mainnet
 
 set -e
 
-# Store the root directory path
-ROOT_DIR=$(pwd)
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-echo "🚀 ProofCapsule Deployment to Sonic Blaze Testnet"
-echo "=================================================="
+echo -e "${GREEN}🚀 ProofCapsule Smart Contract Deployment${NC}"
+echo -e "${YELLOW}Target: Sonic Mainnet${NC}"
+echo ""
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+CONTRACTS_DIR="$ROOT_DIR/src/contracts"
 
 # Check if .env file exists
-if [ ! -f .env ]; then
-    echo "❌ Error: .env file not found!"
-    echo "Please create a .env file with your PRIVATE_KEY"
-    echo "Example:"
-    echo "PRIVATE_KEY=your_private_key_here"
-    echo "RPC_URL=https://rpc.blaze.soniclabs.com"
+if [ ! -f "$ROOT_DIR/.env" ]; then
+    echo -e "${RED}❌ Error: .env file not found!${NC}"
+    echo "Please create a .env file in the root directory with your configuration."
     exit 1
 fi
 
-# Load environment variables from root directory
-source .env
+echo -e "${GREEN}✅ Environment file found${NC}"
 
-# Check if PRIVATE_KEY is set
-if [ -z "$PRIVATE_KEY" ]; then
-    echo "❌ Error: PRIVATE_KEY not set in .env file"
-    exit 1
-fi
+# Navigate to contracts directory
+cd "$CONTRACTS_DIR"
 
-# Export environment variables so they're available in subdirectories
-export PRIVATE_KEY
-export RPC_URL
-export ETHERSCAN_API_KEY
+echo -e "${YELLOW}📦 Building contracts...${NC}"
+forge build --sizes
 
-echo "✅ Environment loaded"
-echo "📡 RPC URL: ${RPC_URL:-https://rpc.blaze.soniclabs.com}"
+echo -e "${YELLOW}🧪 Running tests...${NC}"
+forge test -vvv
 
-# Build contracts
-echo "🔨 Building contracts..."
-cd src/contracts && forge build
+echo -e "${YELLOW}🚀 Deploying to Sonic Mainnet...${NC}"
 
-# Run tests
-echo "🧪 Running tests..."
-forge test
-
-echo "✅ All tests passed!"
-
-# Ask for confirmation
-read -p "🤔 Ready to deploy to Sonic Blaze Testnet? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "❌ Deployment cancelled"
-    exit 1
-fi
+# Copy .env to contracts directory for deployment
+cp "$ROOT_DIR/.env" "$CONTRACTS_DIR/.env"
 
 # Deploy contracts
-echo "🚀 Deploying contracts..."
-
-# Copy .env to contracts directory for Foundry to find it
-cp "$ROOT_DIR/.env" .env
-
-# Check if Etherscan API key is available for verification
-if [ -n "$ETHERSCAN_API_KEY" ]; then
-    echo "🔍 Contract verification enabled (Etherscan API key found)"
-    forge script script/Deploy.s.sol \
-        --rpc-url "${RPC_URL:-https://rpc.blaze.soniclabs.com}" \
-        --private-key "$PRIVATE_KEY" \
-        --broadcast \
-        --verify
-else
-    echo "⚠️  Contract verification skipped (no Etherscan API key)"
-    forge script script/Deploy.s.sol \
-        --rpc-url "${RPC_URL:-https://rpc.blaze.soniclabs.com}" \
-        --private-key "$PRIVATE_KEY" \
-        --broadcast
-fi
+forge script script/Deploy.s.sol \
+    --rpc-url https://rpc.soniclabs.com \
+    --broadcast \
+    --verify
 
 # Clean up
-rm src/contracts/.env
+rm "$CONTRACTS_DIR/.env"
 
-echo "✅ Deployment complete!"
+echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo ""
-echo "📋 Next steps:"
-echo "1. Update your frontend configuration with the deployed contract addresses"
-echo "2. Test the contracts on Sonic Blaze Testnet"
-echo "3. Get testnet tokens from the faucet if needed"
+echo -e "${YELLOW}📋 Next steps:${NC}"
+echo "1. Update your frontend environment variables with the new contract addresses"
+echo "2. Deploy your frontend to Vercel"
+echo "3. Test the complete flow on mainnet"
 echo ""
-echo "🔗 Useful links:"
-echo "- Sonic Blaze Testnet Explorer: https://explorer.blaze.soniclabs.com"
-echo "- RPC Endpoint: https://rpc.blaze.soniclabs.com" 
+echo -e "${GREEN}🎉 ProofCapsule is now live on Sonic Mainnet!${NC}" 

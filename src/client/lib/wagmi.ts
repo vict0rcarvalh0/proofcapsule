@@ -1,7 +1,27 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit'
 import { mainnet } from 'wagmi/chains'
 
-// Sonic Testnet configuration
+// Sonic Mainnet configuration
+const sonicMainnet = {
+  id: 14600,
+  name: 'Sonic Mainnet',
+  network: 'sonic-mainnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Sonic',
+    symbol: 'SONIC',
+  },
+  rpcUrls: {
+    public: { http: [process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL || 'https://rpc.soniclabs.com'] },
+    default: { http: [process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL || 'https://rpc.soniclabs.com'] },
+  },
+  blockExplorers: {
+    etherscan: { name: 'Sonic Explorer', url: 'https://explorer.soniclabs.com' },
+    default: { name: 'Sonic Explorer', url: 'https://explorer.soniclabs.com' },
+  },
+} as const
+
+// Sonic Testnet configuration (for reference)
 const sonicTestnet = {
   id: 14601,
   name: 'Sonic Testnet',
@@ -12,8 +32,8 @@ const sonicTestnet = {
     symbol: 'S',
   },
   rpcUrls: {
-    public: { http: [process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL || 'https://rpc.testnet.soniclabs.com'] },
-    default: { http: [process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL || 'https://rpc.testnet.soniclabs.com'] },
+    public: { http: ['https://rpc.testnet.soniclabs.com'] },
+    default: { http: ['https://rpc.testnet.soniclabs.com'] },
   },
   blockExplorers: {
     etherscan: { name: 'Sonic Testnet Explorer', url: 'https://explorer.testnet.soniclabs.com' },
@@ -25,6 +45,6 @@ const sonicTestnet = {
 export const config = getDefaultConfig({
   appName: 'ProofCapsule',
   projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '',
-  chains: [sonicTestnet, mainnet],
+  chains: [sonicMainnet, sonicTestnet, mainnet], // Mainnet first as default
   ssr: true,
 }) 
