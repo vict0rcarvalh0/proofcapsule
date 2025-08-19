@@ -1,4 +1,4 @@
-import { Capsule, NewCapsule } from '@/lib/db/schema'
+import { Capsule } from '@/lib/db/schema'
 
 // Types for API responses
 export interface ApiResponse<T> {

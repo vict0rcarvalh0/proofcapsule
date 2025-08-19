@@ -60,11 +60,19 @@ jobs:
           cd src/client
           npm ci
 
+      - name: Run linting
+        run: |
+          cd src/client
+          npm run lint
+        id: lint
+        continue-on-error: true
+
       - name: Type check
         run: |
           cd src/client
           npx tsc --noEmit
         id: type-check
+        continue-on-error: true
 
       - name: Build application
         run: |

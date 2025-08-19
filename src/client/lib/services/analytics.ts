@@ -1,16 +1,31 @@
 import { UserStats } from '@/lib/db/schema'
 import { ApiResponse } from './capsules'
 
-export interface GlobalStats {
-  totalCapsules: number
-  totalUsers: number
-  totalVerifications: number
-  todayCapsules: number
-  todayUsers: number
+// Analytics service for fetching platform statistics
+
+export interface AnalyticsResponse {
+  success: boolean
+  data?: {
+    totalCapsules: number
+    totalUsers: number
+    totalVerifications: number
+    todayCapsules: number
+    todayUsers: number
+  }
+  error?: string
 }
 
-export interface UserAnalytics extends UserStats {
-  // Inherits from UserStats
+export interface UserAnalyticsResponse {
+  success: boolean
+  data?: {
+    totalCapsules: number
+    publicCapsules: number
+    privateCapsules: number
+    totalVerifications: number
+    firstCapsuleAt: string | null
+    lastCapsuleAt: string | null
+  }
+  error?: string
 }
 
 // Analytics API service
@@ -18,7 +33,7 @@ export class AnalyticsService {
   private baseUrl = '/api/analytics'
 
   // Get global platform analytics
-  async getGlobalStats(): Promise<ApiResponse<GlobalStats>> {
+  async getGlobalStats(): Promise<ApiResponse<AnalyticsResponse>> {
     try {
       const response = await fetch(this.baseUrl)
       const data = await response.json()
@@ -38,7 +53,7 @@ export class AnalyticsService {
   }
 
   // Get user-specific analytics
-  async getUserStats(walletAddress: string): Promise<ApiResponse<UserAnalytics>> {
+  async getUserStats(walletAddress: string): Promise<ApiResponse<UserAnalyticsResponse>> {
     try {
       const url = `${this.baseUrl}?type=user&wallet=${walletAddress}`
       const response = await fetch(url)
@@ -82,7 +97,7 @@ export class AnalyticsService {
   }
 
   // Get analytics with specific type
-  async getAnalytics(type: 'global' | 'user', walletAddress?: string): Promise<ApiResponse<GlobalStats | UserAnalytics>> {
+  async getAnalytics(type: 'global' | 'user', walletAddress?: string): Promise<ApiResponse<AnalyticsResponse | UserAnalyticsResponse>> {
     if (type === 'user' && !walletAddress) {
       return {
         success: false,

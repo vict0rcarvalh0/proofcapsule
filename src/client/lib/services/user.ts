@@ -1,10 +1,10 @@
 export interface ExportData {
   exportDate: string
   walletAddress: string
-  user: any
-  capsules: any[]
-  verifications: any[]
-  analytics: any
+  user: { walletAddress: string; createdAt: Date; updatedAt: Date }
+  capsules: Array<{ id: number; tokenId: number; description: string | null; location: string | null; createdAt: Date; isPublic: boolean }>
+  verifications: Array<{ id: number; capsuleId: number; verifierAddress: string; verifiedAt: Date }>
+  analytics: { totalCapsules: number; publicCapsules: number; privateCapsules: number; totalVerifications: number }
   summary: {
     totalCapsules: number
     totalVerifications: number

@@ -1,7 +1,7 @@
 // Smart Contract Service
 // Handles interactions with deployed ProofCapsule contracts
 
-import { getContract, parseEther, parseUnits } from 'viem'
+import { getContract } from 'viem'
 import { usePublicClient, useWalletClient } from 'wagmi'
 
 // Contract addresses from deployment
