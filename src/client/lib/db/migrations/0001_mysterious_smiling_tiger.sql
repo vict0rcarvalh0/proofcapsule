@@ -1,0 +1,1 @@
+ALTER TABLE "capsules" ALTER COLUMN "token_id" SET DATA TYPE bigint;

@@ -1,6 +1,6 @@
 {
-  "id": "96f6bf9c-50fa-4a6a-bf67-2a00b84e106b",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "64d1a462-9a01-4025-96d0-fe13e495accd",
+  "prevId": "96f6bf9c-50fa-4a6a-bf67-2a00b84e106b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -83,7 +83,7 @@
         },
         "token_id": {
           "name": "token_id",
-          "type": "integer",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },

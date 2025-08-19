@@ -1,50 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db/server'
 import { capsules, users, userStats } from '@/lib/db/schema'
-import { eq, desc, and } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
+
+const READONLY = process.env.API_READONLY === 'true'
 
 // GET /api/capsules - Get all capsules (with optional filters)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const walletAddress = searchParams.get('wallet')
-    const isPublic = searchParams.get('public')
+    const wallet = searchParams.get('wallet')
     const limit = parseInt(searchParams.get('limit') || '20')
-    const offset = parseInt(searchParams.get('offset') || '0')
 
-    let query = db.select().from(capsules)
-
-    // Apply filters
-    if (walletAddress) {
-      query = query.where(eq(capsules.walletAddress, walletAddress))
+    if (READONLY) {
+      return NextResponse.json({ success: true, data: [] })
     }
 
-    if (isPublic !== null) {
-      const publicFilter = isPublic === 'true'
-      query = query.where(eq(capsules.isPublic, publicFilter))
+    let query = (db as any).select().from(capsules).orderBy(desc(capsules.createdAt)).limit(limit)
+
+    if (wallet) {
+      query = (db as any).select().from(capsules).where(eq(capsules.walletAddress, wallet)).orderBy(desc(capsules.createdAt)).limit(limit)
     }
 
-    // Apply pagination and ordering
-    const results = await query
-      .orderBy(desc(capsules.createdAt))
-      .limit(limit)
-      .offset(offset)
+    const rows = await query
 
-    return NextResponse.json({
-      success: true,
-      data: results,
-      pagination: {
-        limit,
-        offset,
-        hasMore: results.length === limit
-      }
-    })
+    return NextResponse.json({ success: true, data: rows })
   } catch (error) {
     console.error('Error fetching capsules:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch capsules' },
-      { status: 500 }
-    )
+    if (READONLY) {
+      return NextResponse.json({ success: true, data: [] })
+    }
+    return NextResponse.json({ success: false, error: 'Failed to fetch capsules' }, { status: 500 })
   }
 }
 
@@ -52,6 +38,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+
+    if (READONLY) {
+      // In readonly mode, accept but do not persist
+      return NextResponse.json({ success: true, data: { ...body, id: 0 } }, { status: 201 })
+    }
+
     const {
       tokenId,
       walletAddress,
@@ -65,16 +57,8 @@ export async function POST(request: NextRequest) {
       gasUsed
     } = body
 
-    // Validate required fields
-    if (!tokenId || !walletAddress || !contentHash) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
-
     // Check if content hash already exists
-    const existingCapsule = await db
+    const existingCapsule = await (db as any)
       .select()
       .from(capsules)
       .where(eq(capsules.contentHash, contentHash))
@@ -88,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the capsule
-    const [newCapsule] = await db
+    const [newCapsule] = await (db as any)
       .insert(capsules)
       .values({
         tokenId,
@@ -105,7 +89,7 @@ export async function POST(request: NextRequest) {
       .returning()
 
     // Create or update user if not exists
-    await db
+    await (db as any)
       .insert(users)
       .values({
         walletAddress,
@@ -117,10 +101,7 @@ export async function POST(request: NextRequest) {
     // Update user stats
     await updateUserStats(walletAddress)
 
-    return NextResponse.json({
-      success: true,
-      data: newCapsule
-    }, { status: 201 })
+    return NextResponse.json({ success: true, data: newCapsule }, { status: 201 })
   } catch (error) {
     console.error('Error creating capsule:', error)
     return NextResponse.json(
@@ -133,8 +114,7 @@ export async function POST(request: NextRequest) {
 // Helper function to update user stats
 async function updateUserStats(walletAddress: string) {
   try {
-    // Get user's capsule counts
-    const userCapsules = await db
+    const userCapsules = await (db as any)
       .select()
       .from(capsules)
       .where(eq(capsules.walletAddress, walletAddress))
@@ -143,32 +123,43 @@ async function updateUserStats(walletAddress: string) {
     const publicCapsules = userCapsules.filter((c: any) => c.isPublic).length
     const privateCapsules = totalCapsules - publicCapsules
 
-    const firstCapsule = userCapsules[0]
-    const lastCapsule = userCapsules[userCapsules.length - 1]
+    // Sort by creation date to get first and last
+    const sortedCapsules = userCapsules.sort((a: any, b: any) => 
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+    
+    const firstCapsule = sortedCapsules[0]
+    const lastCapsule = sortedCapsules[sortedCapsules.length - 1]
 
-    // Upsert user stats
-    await db
-      .insert(userStats)
-      .values({
-        walletAddress,
-        totalCapsules,
-        publicCapsules,
-        privateCapsules,
-        firstCapsuleAt: firstCapsule?.createdAt,
-        lastCapsuleAt: lastCapsule?.createdAt,
-        updatedAt: new Date()
-      })
-      .onConflictDoUpdate({
-        target: userStats.walletAddress,
-        set: {
-          totalCapsules,
-          publicCapsules,
-          privateCapsules,
-          firstCapsuleAt: firstCapsule?.createdAt,
-          lastCapsuleAt: lastCapsule?.createdAt,
-          updatedAt: new Date()
-        }
-      })
+    // Check if user stats already exist
+    const existingStats = await (db as any)
+      .select()
+      .from(userStats)
+      .where(eq(userStats.walletAddress, walletAddress))
+      .limit(1)
+
+    const statsData = {
+      walletAddress,
+      totalCapsules,
+      publicCapsules,
+      privateCapsules,
+      firstCapsuleAt: firstCapsule?.createdAt || null,
+      lastCapsuleAt: lastCapsule?.createdAt || null,
+      updatedAt: new Date()
+    }
+
+    if (existingStats.length > 0) {
+      // Update existing stats
+      await (db as any)
+        .update(userStats)
+        .set(statsData)
+        .where(eq(userStats.walletAddress, walletAddress))
+    } else {
+      // Insert new stats
+      await (db as any)
+        .insert(userStats)
+        .values(statsData)
+    }
   } catch (error) {
     console.error('Error updating user stats:', error)
   }

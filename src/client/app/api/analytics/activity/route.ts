@@ -3,6 +3,8 @@ import { db } from '@/lib/db/server'
 import { capsules, verifications } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 
+const READONLY = process.env.API_READONLY === 'true'
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -16,7 +18,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get recent capsules
+    // Readonly / fail-open guard for production
+    if (READONLY) {
+      return NextResponse.json({ success: true, data: [] })
+    }
+
     const recentCapsules = await (db as any)
       .select()
       .from(capsules)
@@ -24,7 +30,6 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(capsules.createdAt))
       .limit(limit)
 
-    // Get recent verifications
     const recentVerifications = await (db as any)
       .select()
       .from(verifications)
@@ -32,30 +37,30 @@ export async function GET(request: NextRequest) {
       .orderBy(desc(verifications.verifiedAt))
       .limit(limit)
 
-    // Combine and sort activities
     const activities = [
-      ...recentCapsules.map((capsule: any) => ({
-        id: capsule.id,
+      ...recentCapsules.map((c: any) => ({
+        id: c.id,
         action: 'Created capsule',
-        description: capsule.description || `Capsule #${capsule.tokenId}`,
-        timestamp: capsule.createdAt
+        description: c.description || `Capsule #${c.tokenId}`,
+        timestamp: c.createdAt
       })),
-      ...recentVerifications.map((verification: any) => ({
-        id: verification.id,
+      ...recentVerifications.map((v: any) => ({
+        id: v.id,
         action: 'Verified capsule',
-        description: `Capsule #${verification.capsuleId}`,
-        timestamp: verification.verifiedAt
+        description: `Capsule #${v.capsuleId}`,
+        timestamp: v.verifiedAt
       }))
-    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, limit)
+    ]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, limit)
 
-    return NextResponse.json({
-      success: true,
-      data: activities
-    })
-
+    return NextResponse.json({ success: true, data: activities })
   } catch (error) {
     console.error('Error fetching user activity:', error)
+    // Fail-open fallback in production
+    if (READONLY) {
+      return NextResponse.json({ success: true, data: [] })
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to fetch user activity' },
       { status: 500 }
