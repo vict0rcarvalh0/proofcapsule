@@ -237,16 +237,17 @@ export const PROOF_CAPSULE_REGISTRY_ABI = [
 
 // Contract service class
 export class ContractService {
-  private publicClient: any
-  private walletClient: any
+  private publicClient: any | null
+  private walletClient: any | null
 
-  constructor(publicClient: any, walletClient: any) {
+  constructor(publicClient: any | null, walletClient: any | null) {
     this.publicClient = publicClient
     this.walletClient = walletClient
   }
 
   // Get NFT contract instance
   getNFTContract() {
+    if (!this.publicClient) throw new Error('Public client not ready')
     return getContract({
       address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
       abi: PROOF_CAPSULE_NFT_ABI,
@@ -256,6 +257,7 @@ export class ContractService {
 
   // Get Registry contract instance
   getRegistryContract() {
+    if (!this.publicClient) throw new Error('Public client not ready')
     return getContract({
       address: CONTRACT_ADDRESSES.PROOF_CAPSULE_REGISTRY as `0x${string}`,
       abi: PROOF_CAPSULE_REGISTRY_ABI,
@@ -271,6 +273,7 @@ export class ContractService {
     ipfsHash: string
     isPublic: boolean
   }) {
+    if (!this.walletClient) throw new Error('Connect your wallet first')
     const hash = await this.walletClient.writeContract({
       address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
       abi: PROOF_CAPSULE_NFT_ABI,
@@ -289,6 +292,7 @@ export class ContractService {
 
   // Verify content hash
   async verifyContentHash(contentHash: string): Promise<bigint> {
+    if (!this.publicClient) throw new Error('Public client not ready')
     return await this.publicClient.readContract({
       address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
       abi: PROOF_CAPSULE_NFT_ABI,
@@ -299,6 +303,7 @@ export class ContractService {
 
   // Get capsule data
   async getCapsule(tokenId: bigint) {
+    if (!this.publicClient) throw new Error('Public client not ready')
     return await this.publicClient.readContract({
       address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
       abi: PROOF_CAPSULE_NFT_ABI,
@@ -309,6 +314,7 @@ export class ContractService {
 
   // Get token URI (IPFS metadata)
   async getTokenURI(tokenId: bigint): Promise<string> {
+    if (!this.publicClient) throw new Error('Public client not ready')
     return await this.publicClient.readContract({
       address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
       abi: PROOF_CAPSULE_NFT_ABI,
@@ -319,6 +325,7 @@ export class ContractService {
 
   // Get user stats from registry
   async getUserStats(userAddress: string) {
+    if (!this.publicClient) throw new Error('Public client not ready')
     return await this.publicClient.readContract({
       address: CONTRACT_ADDRESSES.PROOF_CAPSULE_REGISTRY as `0x${string}`,
       abi: PROOF_CAPSULE_REGISTRY_ABI,
@@ -335,6 +342,7 @@ export class ContractService {
     ipfsHashes: string[]
     isPublic: boolean[]
   }) {
+    if (!this.walletClient) throw new Error('Connect your wallet first')
     const hash = await this.walletClient.writeContract({
       address: CONTRACT_ADDRESSES.PROOF_CAPSULE_REGISTRY as `0x${string}`,
       abi: PROOF_CAPSULE_REGISTRY_ABI,
@@ -353,11 +361,13 @@ export class ContractService {
 
   // Wait for transaction and get receipt
   async waitForTransaction(hash: `0x${string}`) {
+    if (!this.publicClient) throw new Error('Public client not ready')
     return await this.publicClient.waitForTransactionReceipt({ hash })
   }
 
   // Get transaction details
   async getTransaction(hash: `0x${string}`) {
+    if (!this.publicClient) throw new Error('Public client not ready')
     return await this.publicClient.getTransaction({ hash })
   }
 }
@@ -367,13 +377,6 @@ export function useContractService() {
   const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
 
-  if (!publicClient) {
-    throw new Error('Public client not ready')
-  }
-
-  if (!walletClient) {
-    throw new Error('Wallet client not ready')
-  }
-
-  return new ContractService(publicClient, walletClient)
+  // Do not throw on mount; return a service that guards methods internally
+  return new ContractService(publicClient ?? null, walletClient ?? null)
 } 
