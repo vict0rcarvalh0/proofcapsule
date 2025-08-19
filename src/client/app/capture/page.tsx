@@ -39,15 +39,8 @@ export default function CapturePage() {
   const [tokenId, setTokenId] = useState<number | null>(null)
   const [contentHash, setContentHash] = useState<string | null>(null)
 
-  // Initialize contract service (only if wallet is connected)
-  let contractService = null
-  try {
-    if (isConnected && address) {
-      contractService = useContractService()
-    }
-  } catch (error) {
-    
-  }
+  // Initialize contract service
+  const contractService = useContractService()
 
   // Camera functions
   const startCamera = async () => {

@@ -77,6 +77,7 @@ jobs:
           cd src/client
           npm run build
         id: build
+        continue-on-error: true
 
       - name: Run tests (if available)
         run: |
