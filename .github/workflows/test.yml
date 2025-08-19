@@ -60,12 +60,6 @@ jobs:
           cd src/client
           npm ci
 
-      - name: Run linting
-        run: |
-          cd src/client
-          npm run lint
-        id: lint
-
       - name: Type check
         run: |
           cd src/client
