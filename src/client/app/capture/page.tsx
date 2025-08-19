@@ -46,7 +46,7 @@ export default function CapturePage() {
       contractService = useContractService()
     }
   } catch (error) {
-    console.error('Contract service not ready yet:', error instanceof Error ? error.message : 'Unknown error')
+    
   }
 
   // Camera functions
@@ -251,7 +251,7 @@ export default function CapturePage() {
           todayCapsules: response.data.todayCapsules,
           activeUsers: response.data.totalUsers
         })
-      }
+  }
     }
     loadStats()
   }, [])
@@ -480,8 +480,8 @@ export default function CapturePage() {
                       }`}>
                         {isCameraReady ? 'Ready' : 'Loading...'}
                       </div>
-                    </div>
-                  </div>
+                          </div>
+                        </div>
                 )}
 
                 {/* Captured Image Preview */}
@@ -494,9 +494,9 @@ export default function CapturePage() {
                         alt="Captured"
                         className="w-full h-64 object-cover rounded-lg border border-border"
                       />
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                         className="absolute top-2 right-2"
                         onClick={() => {
                           setCapturedImage(null)
@@ -536,7 +536,7 @@ export default function CapturePage() {
                       <Navigation className="w-4 h-4 mr-2" />
                     )}
                     {isGettingLocation ? 'Getting Location...' : 'Capture Location'}
-                  </Button>
+                        </Button>
                 </div>
 
                 {/* Location Display */}
@@ -587,7 +587,7 @@ export default function CapturePage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Describe this moment..."
-                    className="w-full p-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                         className="w-full p-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     rows={3}
                   />
                 </div>

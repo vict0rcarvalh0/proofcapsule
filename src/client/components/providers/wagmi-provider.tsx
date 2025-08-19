@@ -10,7 +10,7 @@ const queryClient = new QueryClient()
 
 const { wallets } = getDefaultWallets({
   appName: 'ProofCapsule',
-  projectId: 'b934d56b44c8b458bc65034dea081498',
+  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '',
 })
 
 export function WagmiWrapper({ children }: { children: React.ReactNode }) {

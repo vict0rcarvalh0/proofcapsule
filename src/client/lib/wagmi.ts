@@ -12,8 +12,8 @@ const sonicTestnet = {
     symbol: 'S',
   },
   rpcUrls: {
-    public: { http: ['https://rpc.testnet.soniclabs.com'] },
-    default: { http: ['https://rpc.testnet.soniclabs.com'] },
+    public: { http: [process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL || 'https://rpc.testnet.soniclabs.com'] },
+    default: { http: [process.env.NEXT_PUBLIC_RPC_URL || process.env.RPC_URL || 'https://rpc.testnet.soniclabs.com'] },
   },
   blockExplorers: {
     etherscan: { name: 'Sonic Testnet Explorer', url: 'https://explorer.testnet.soniclabs.com' },
@@ -24,7 +24,7 @@ const sonicTestnet = {
 // Set up wagmi config with RainbowKit
 export const config = getDefaultConfig({
   appName: 'ProofCapsule',
-  projectId: 'b934d56b44c8b458bc65034dea081498',
+  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '',
   chains: [sonicTestnet, mainnet],
   ssr: true,
 }) 

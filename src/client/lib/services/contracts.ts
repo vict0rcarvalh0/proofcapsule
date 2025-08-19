@@ -6,8 +6,8 @@ import { usePublicClient, useWalletClient } from 'wagmi'
 
 // Contract addresses from deployment
 export const CONTRACT_ADDRESSES = {
-  PROOF_CAPSULE_NFT: '0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A',
-  PROOF_CAPSULE_REGISTRY: '0x45b1f38d1adfB5A9FFAA81b996a53bE78A33cF0c'
+  PROOF_CAPSULE_NFT: process.env.NEXT_PUBLIC_NFT_ADDRESS || process.env.NFT_ADDRESS || '0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A',
+  PROOF_CAPSULE_REGISTRY: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || process.env.REGISTRY_ADDRESS || '0x45b1f38d1adfB5A9FFAA81b996a53bE78A33cF0c'
 } as const
 
 // Contract ABIs (simplified versions)
