@@ -9,8 +9,8 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
-    name: Foundry project
+  backend:
+    name: Smart Contracts (Foundry)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,4 +40,46 @@ jobs:
         run: |
           cd src/contracts
           forge test -vvv
+        id: test
+
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: src/client/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd src/client
+          npm ci
+
+      - name: Run linting
+        run: |
+          cd src/client
+          npm run lint
+        id: lint
+
+      - name: Type check
+        run: |
+          cd src/client
+          npx tsc --noEmit
+        id: type-check
+
+      - name: Build application
+        run: |
+          cd src/client
+          npm run build
+        id: build
+
+      - name: Run tests (if available)
+        run: |
+          cd src/client
+          npm test --if-present
         id: test
