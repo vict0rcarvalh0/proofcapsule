@@ -200,16 +200,15 @@ export default function CapturePage() {
       const { latitude, longitude } = position.coords
       setCurrentLocation({ lat: latitude, lng: longitude })
       
-      // Get address from coordinates
+      // Get address from coordinates (using a free geocoding service)
       try {
         const response = await fetch(
-          `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_OPENCAGE_API_KEY`
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
         )
         const data = await response.json()
         
-        if (data.results && data.results[0]) {
-          const address = data.results[0].formatted
-          setLocationAddress(address)
+        if (data.display_name) {
+          setLocationAddress(data.display_name)
         } else {
           setLocationAddress(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`)
         }

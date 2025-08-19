@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Images, Search, Filter, Calendar, MapPin, Hash, Eye, Share2, Download, Loader2, ExternalLink, Copy } from "lucide-react"
+import { Images, Search, Filter, Calendar, MapPin, Hash, Eye, Share2, Download, Loader2, ExternalLink, Copy, ChevronDown } from "lucide-react"
 import { useAccount } from "wagmi"
 import { capsulesService, ipfsService, type Capsule } from "@/lib/services"
 import { formatDate, truncateHash, copyToClipboard } from "@/lib/utils/browser"
@@ -276,26 +276,32 @@ export default function GalleryPage() {
             </div>
 
             {/* View Mode Filter */}
-            <select
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as "all" | "public" | "private")}
-              className="px-4 py-3 pr-10 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              <option value="all">All Capsules</option>
-              <option value="public">Public Only</option>
-              <option value="private">Private Only</option>
-            </select>
+            <div className="relative">
+              <select
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value as "all" | "public" | "private")}
+                className="appearance-none px-4 py-3 pr-12 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-full"
+              >
+                <option value="all">All Capsules</option>
+                <option value="public">Public Only</option>
+                <option value="private">Private Only</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            </div>
 
             {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-3 pr-10 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              <option value="newest">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="name">Name A-Z</option>
-            </select>
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="appearance-none px-4 py-3 pr-12 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-full"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="name">Name A-Z</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            </div>
           </div>
 
           {/* Stats */}
