@@ -26,7 +26,7 @@ August 19, 2025
 
 #### RPC Endpoints
 - **Mainnet RPC**: `https://rpc.soniclabs.com`
-- **Chain ID**: 14600
+- **Chain ID**: 146
 - **Block Explorer**: `https://explorer.soniclabs.com`
 
 #### Frontend Configuration
@@ -79,7 +79,7 @@ Contracts can be verified on the Sonic Explorer:
 #### Test Commands
 ```bash
 # Verify contracts (if needed)
-forge verify-contract --chain-id 14600
+forge verify-contract --chain-id 146
 
 # Test contract interaction
 cast call 0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A "name()" --rpc-url https://rpc.soniclabs.com

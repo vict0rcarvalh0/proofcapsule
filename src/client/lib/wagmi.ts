@@ -3,7 +3,7 @@ import { mainnet } from 'wagmi/chains'
 
 // Sonic Mainnet configuration
 const sonicMainnet = {
-  id: 14600,
+  id: 146,
   name: 'Sonic Mainnet',
   network: 'sonic-mainnet',
   nativeCurrency: {
