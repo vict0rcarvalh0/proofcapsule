@@ -7,8 +7,8 @@ export const CONTRACT_ADDRESSES = {
     registry: '0x45b1f38d1adfB5A9FFAA81b996a53bE78A33cF0c',
   },
   [sonicTestnet.id]: {
-    nft: '0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A', // Using mainnet addresses for testing
-    registry: '0x45b1f38d1adfB5A9FFAA81b996a53bE78A33cF0c', // Using mainnet addresses for testing
+    nft: '0x075bECC2a2D3c2210a60b9C8503EBf18a1FA0Ca3', // Actual testnet NFT contract
+    registry: '0x0000000000000000000000000000000000000000', // Placeholder - will be updated when registry is deployed
   },
 } as const
 
