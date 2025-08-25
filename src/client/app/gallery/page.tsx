@@ -277,29 +277,29 @@ export default function GalleryPage() {
 
             {/* View Mode Filter */}
             <div className="relative">
-              <select
+            <select
                 value={viewMode}
                 onChange={(e) => setViewMode(e.target.value as "all" | "public" | "private")}
                 className="appearance-none px-4 py-3 pr-12 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-full"
-              >
+            >
                 <option value="all">All Capsules</option>
                 <option value="public">Public Only</option>
                 <option value="private">Private Only</option>
-              </select>
+            </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
 
             {/* Sort */}
             <div className="relative">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
                 className="appearance-none px-4 py-3 pr-12 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-full"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="name">Name A-Z</option>
-              </select>
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="name">Name A-Z</option>
+            </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             </div>
           </div>
@@ -330,53 +330,53 @@ export default function GalleryPage() {
 
         {/* Capsules Grid */}
         {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sortedCapsules.map((capsule) => (
-              <Card key={capsule.id} className="hover:shadow-lg transition-all duration-300 group">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+            <Card key={capsule.id} className="hover:shadow-lg transition-all duration-300 group">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
                       <CardTitle className="text-lg mb-2">
                         Capsule #{capsule.tokenId}
                       </CardTitle>
-                      <CardDescription className="line-clamp-2">
+                    <CardDescription className="line-clamp-2">
                         {capsule.description || "No description provided"}
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-4">
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-4">
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleViewCapsule(capsule)}
                       >
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <Eye className="w-4 h-4" />
+                    </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => handleShareCapsule(capsule)}
                       >
-                        <Share2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                      <Share2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  {/* Metadata */}
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center text-muted-foreground">
-                      <Calendar className="w-4 h-4 mr-2" />
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                {/* Metadata */}
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center text-muted-foreground">
+                    <Calendar className="w-4 h-4 mr-2" />
                       {formatDate(capsule.createdAt.toString())}
-                    </div>
+                  </div>
                     <div className="flex items-center text-muted-foreground">
                       <MapPin className="w-4 h-4 mr-2" />
                       {capsule.location || "No location"}
                     </div>
-                    <div className="flex items-center text-muted-foreground">
-                      <Hash className="w-4 h-4 mr-2" />
+                  <div className="flex items-center text-muted-foreground">
+                    <Hash className="w-4 h-4 mr-2" />
                       <span className="flex-1">{truncateHash(capsule.contentHash)}</span>
                       <Button 
                         variant="ghost" 
@@ -390,55 +390,55 @@ export default function GalleryPage() {
                           <Copy className="w-3 h-3" />
                         )}
                       </Button>
-                    </div>
                   </div>
+                </div>
 
                   {/* Status Badge */}
-                  <div className="flex items-center justify-between">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                <div className="flex items-center justify-between">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       capsule.isPublic ? "bg-green-500/20 text-green-400" : "bg-orange-500/20 text-orange-400"
-                    }`}>
+                  }`}>
                       {capsule.isPublic ? "Public" : "Private"}
-                    </span>
-                    
-                    <div className="flex items-center space-x-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-xs text-green-400">Verified</span>
-                    </div>
+                  </span>
+                  
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-green-400">Verified</span>
                   </div>
+                </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center space-x-2 pt-2 border-t border-border">
+                {/* Actions */}
+                <div className="flex items-center space-x-2 pt-2 border-t border-border">
                     <Button 
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
                       onClick={() => handleViewCapsule(capsule)}
                     >
-                      <Eye className="w-4 h-4 mr-2" />
-                      View
-                    </Button>
+                    <Eye className="w-4 h-4 mr-2" />
+                    View
+                  </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
                       onClick={() => handleShareCapsule(capsule)}
                     >
-                      <Share2 className="w-4 h-4 mr-2" />
-                      Share
-                    </Button>
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share
+                  </Button>
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => handleDownloadCapsule(capsule)}
                     >
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <Download className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
         )}
 
         {/* Empty State */}

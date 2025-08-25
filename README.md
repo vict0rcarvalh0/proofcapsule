@@ -251,5 +251,8 @@ API_READONLY=false
 - GET /api/verify - Verify content
 - GET /api/analytics - User statistics
 
+## Videos
+- Pitch: https://youtu.be/Kl6WowpumZ8
+- Demo: https://youtu.be/tcFY8XNGAuY
 
 *ProofCapsule - Let's make reality verifiable again*

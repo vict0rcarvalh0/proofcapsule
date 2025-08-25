@@ -262,13 +262,13 @@ function CapturePageComponent() {
   useEffect(() => {
     const loadStats = async () => {
       const response = await analyticsService.getGlobalStats()
-      if (response.success && response.data) {
+      if (response.success && response.data?.data) {
         setStats({
-          totalCapsules: response.data.totalCapsules,
-          todayCapsules: response.data.todayCapsules,
-          activeUsers: response.data.totalUsers
+          totalCapsules: response.data.data.totalCapsules,
+          todayCapsules: response.data.data.todayCapsules,
+          activeUsers: response.data.data.totalUsers
         })
-  }
+      }
     }
     loadStats()
   }, [])
@@ -373,10 +373,20 @@ function CapturePageComponent() {
         gasUsed: Number(receipt.gasUsed)
       }
 
+      console.log('Saving capsule to database...')
       const response = await capsulesService.createCapsule(capsuleData)
       
       if (!response.success) {
-        throw new Error(response.error || 'Failed to create capsule')
+        console.warn('Database save failed, but NFT was minted successfully:', response.error)
+        
+        // Show a warning but don't fail the entire operation since NFT was minted
+        toast.warning('NFT minted successfully! Database save failed.', {
+          description: 'Your capsule exists on the blockchain. Check your gallery to view it.'
+        })
+        
+        // Continue with success flow since the NFT was created
+      } else {
+        console.log('Capsule saved to database successfully')
       }
 
       setUploadProgress(100)
@@ -389,14 +399,19 @@ function CapturePageComponent() {
       setDescription("")
       setIsPublic(true)
       
-      // Refresh stats
-      const statsResponse = await analyticsService.getGlobalStats()
-      if (statsResponse.success && statsResponse.data) {
-        setStats({
-          totalCapsules: statsResponse.data.totalCapsules,
-          todayCapsules: statsResponse.data.todayCapsules,
-          activeUsers: statsResponse.data.totalUsers
-        })
+      // Refresh stats (don't let this fail the operation)
+      try {
+        const statsResponse = await analyticsService.getGlobalStats()
+        if (statsResponse.success && statsResponse.data?.data) {
+          setStats({
+            totalCapsules: statsResponse.data.data.totalCapsules,
+            todayCapsules: statsResponse.data.data.todayCapsules,
+            activeUsers: statsResponse.data.data.totalUsers
+          })
+        }
+      } catch (statsError) {
+        console.warn('Failed to refresh stats:', statsError)
+        // Don't fail the operation for stats refresh failure
       }
       
       toast.success('Proof Capsule created successfully!', {
@@ -833,6 +848,6 @@ function CapturePageComponent() {
       </div>
     </div>
   )
-}
+} 
 
 export default CapturePage 

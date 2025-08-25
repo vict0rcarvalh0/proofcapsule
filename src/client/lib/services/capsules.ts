@@ -31,6 +31,27 @@ export interface UpdateCapsuleData {
   isPublic?: boolean
 }
 
+// Helper function to add timeout to fetch requests
+async function fetchWithTimeout(url: string, options: RequestInit, timeout = 30000): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    })
+    clearTimeout(timeoutId)
+    return response
+  } catch (error) {
+    clearTimeout(timeoutId)
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout - the operation took too long to complete')
+    }
+    throw error
+  }
+}
+
 // Capsules API service
 export class CapsulesService {
   private baseUrl = '/api/capsules'
@@ -51,7 +72,7 @@ export class CapsulesService {
       if (params?.offset) searchParams.append('offset', params.offset.toString())
 
       const url = `${this.baseUrl}?${searchParams.toString()}`
-      const response = await fetch(url)
+      const response = await fetchWithTimeout(url, {}, 15000) // 15 second timeout for reads
       const data = await response.json()
 
       if (!response.ok) {
@@ -71,7 +92,7 @@ export class CapsulesService {
   // Get a specific capsule by ID
   async getCapsule(id: number): Promise<ApiResponse<Capsule>> {
     try {
-      const response = await fetch(`${this.baseUrl}/${id}`)
+      const response = await fetchWithTimeout(`${this.baseUrl}/${id}`, {}, 15000)
       const data = await response.json()
 
       if (!response.ok) {
@@ -91,13 +112,14 @@ export class CapsulesService {
   // Create a new capsule
   async createCapsule(capsuleData: CreateCapsuleData): Promise<ApiResponse<Capsule>> {
     try {
-      const response = await fetch(this.baseUrl, {
+      console.log('Sending capsule creation request...')
+      const response = await fetchWithTimeout(this.baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(capsuleData),
-      })
+      }, 45000) // 45 second timeout for capsule creation
 
       const data = await response.json()
 
@@ -105,12 +127,23 @@ export class CapsulesService {
         throw new Error(data.error || 'Failed to create capsule')
       }
 
+      console.log('Capsule creation successful')
       return data
     } catch (error) {
       console.error('Error creating capsule:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create capsule'
+      
+      // Provide more specific error messages for common issues
+      if (errorMessage.includes('timeout')) {
+        return {
+          success: false,
+          error: 'Database operation timed out. Please try again. If the problem persists, your capsule may have been created successfully - check your gallery.'
+        }
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to create capsule'
+        error: errorMessage
       }
     }
   }
@@ -118,13 +151,13 @@ export class CapsulesService {
   // Update a capsule
   async updateCapsule(id: number, updateData: UpdateCapsuleData): Promise<ApiResponse<Capsule>> {
     try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
+      const response = await fetchWithTimeout(`${this.baseUrl}/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(updateData),
-      })
+      }, 30000)
 
       const data = await response.json()
 
@@ -145,9 +178,9 @@ export class CapsulesService {
   // Delete a capsule
   async deleteCapsule(id: number): Promise<ApiResponse<{ message: string }>> {
     try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
+      const response = await fetchWithTimeout(`${this.baseUrl}/${id}`, {
         method: 'DELETE',
-      })
+      }, 30000)
 
       const data = await response.json()
 

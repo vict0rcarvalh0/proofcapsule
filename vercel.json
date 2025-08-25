@@ -1,9 +1,9 @@
 {
-  "buildCommand": "npm run build",
-  "installCommand": "npm install --force",
+  "buildCommand": "cd src/client && npm run build",
+  "installCommand": "cd src/client && npm ci",
   "functions": {
     "src/client/app/api/**/*.ts": {
-      "maxDuration": 30
+      "maxDuration": 60
     }
   }
 } 

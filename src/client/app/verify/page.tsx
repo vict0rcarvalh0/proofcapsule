@@ -198,7 +198,7 @@ export default function VerifyPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center">
-                      <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
+                        <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
                       Verification Result
                     </CardTitle>
                     <div className="px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
@@ -215,21 +215,21 @@ export default function VerifyPage() {
                         <div>
                           <span className="text-sm text-muted-foreground">Capsule ID:</span>
                           <p className="text-sm font-mono text-foreground mt-1">#{verificationResult.capsule.tokenId}</p>
-                        </div>
-                        
-                        <div>
+                    </div>
+                    
+                    <div>
                           <span className="text-sm text-muted-foreground">Description:</span>
                           <p className="text-sm text-foreground mt-1">
                             {verificationResult.capsule.description || "No description provided"}
-                          </p>
-                        </div>
-
-                        {verificationResult.capsule.location && (
-                          <div>
+                        </p>
+                      </div>
+                      
+                      {verificationResult.capsule.location && (
+                        <div>
                             <span className="text-sm text-muted-foreground">Location:</span>
                             <p className="text-sm text-foreground mt-1 flex items-center">
                               <MapPin className="w-3 h-3 mr-1" />
-                              {verificationResult.capsule.location}
+                            {verificationResult.capsule.location}
                             </p>
                           </div>
                         )}
@@ -396,7 +396,7 @@ export default function VerifyPage() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-border">
+                                     <div className="pt-4 border-t border-border">
                     <Button 
                       variant="outline" 
                       className="w-full" 

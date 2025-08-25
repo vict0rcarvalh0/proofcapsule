@@ -20,7 +20,11 @@ if (url) {
     db = drizzleNeon(sql, { schema })
   } else {
     // Local Postgres via postgres-js
-    const client = postgres(url, { ssl: false })
+    const client = postgres(url, { 
+      ssl: false,
+      max: 10, // Maximum number of connections
+      idle_timeout: 20, // Close idle connections after 20 seconds
+    })
     db = drizzlePg(client, { schema })
   }
 } else {

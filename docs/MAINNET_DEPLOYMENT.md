@@ -1,11 +1,11 @@
-# 🚀 Sonic Mainnet Deployment Summary
+# Sonic Mainnet Deployment Summary
 
-## ✅ Deployment Status: **COMPLETE**
+## Deployment Status: **COMPLETE**
 
-### 📅 Deployment Date
+### Deployment Date
 August 19, 2025
 
-### 🔗 Contract Addresses (Sonic Mainnet)
+### Contract Addresses (Sonic Mainnet)
 
 #### Core Contracts
 - **ProofCapsuleNFT**: `0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A`
@@ -16,13 +16,13 @@ August 19, 2025
 - **NFT Deployment**: `0x0f7810241acbc1854d2b583c3c65398f9b66b6d7ce9b3d6c61a3b646323106a4`
 - **Setup Transaction**: `0x8bf7f141b0dde7a5f8f41c43643ac5adba1822e011b8b1c0e0c73f1d63b88c8c`
 
-### 💰 Gas Costs
+### Gas Costs
 - **Total Cost**: 0.168 SONIC tokens
 - **Registry Contract**: 0.054 SONIC (1,070,871 gas)
 - **NFT Contract**: 0.112 SONIC (2,240,881 gas)
 - **Setup**: 0.002 SONIC (48,438 gas)
 
-### 🌐 Network Configuration
+### Network Configuration
 
 #### RPC Endpoints
 - **Mainnet RPC**: `https://rpc.soniclabs.com`
@@ -34,7 +34,7 @@ August 19, 2025
 - **Wallet Connect**: Configured for mainnet
 - **Environment Variables**: Updated for mainnet
 
-### 🔧 Environment Variables
+### Environment Variables
 
 #### Required for Frontend
 ```env
@@ -49,33 +49,6 @@ RPC_URL=https://rpc.soniclabs.com
 NFT_ADDRESS=0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A
 REGISTRY_ADDRESS=0x45b1f38d1adfB5A9FFAA81b996a53bE78A33cF0c
 ```
-
-### 🎯 Next Steps
-
-#### 1. Frontend Deployment
-- [ ] Update Vercel environment variables
-- [ ] Deploy frontend to production
-- [ ] Test wallet connection on mainnet
-- [ ] Test capsule creation flow
-
-#### 2. Production Testing
-- [ ] Test with real SONIC tokens
-- [ ] Verify IPFS integration
-- [ ] Test all user flows
-- [ ] Monitor gas costs
-
-#### 3. Documentation
-- [ ] Update user documentation
-- [ ] Create mainnet-specific guides
-- [ ] Document gas cost estimates
-
-### 🔍 Verification
-
-#### Contract Verification
-Contracts can be verified on the Sonic Explorer:
-- **NFT Contract**: https://explorer.soniclabs.com/address/0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A
-- **Registry Contract**: https://explorer.soniclabs.com/address/0x45b1f38d1adfB5A9FFAA81b996a53bE78A33cF0c
-
 #### Test Commands
 ```bash
 # Verify contracts (if needed)
@@ -85,7 +58,7 @@ forge verify-contract --chain-id 146
 cast call 0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A "name()" --rpc-url https://rpc.soniclabs.com
 ```
 
-### 📊 Performance Metrics
+### Performance Metrics
 
 #### Gas Optimization
 - **Registry Contract**: 1,070,871 gas
@@ -98,26 +71,9 @@ cast call 0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A "name()" --rpc-url https://
 - **NFT**: Standard ERC-721 implementation
 - **Total**: Within block gas limits
 
-### 🛡️ Security
+### Security
 
 #### Audit Status
 - **Contracts**: Not audited (use at own risk)
 - **OpenZeppelin**: Uses audited libraries
 - **Access Control**: Owner-based permissions
-
-#### Known Limitations
-- **EIP-3855**: Not supported on Sonic (warning only)
-- **Gas Estimation**: May vary based on network conditions
-
-### 📞 Support
-
-#### Issues & Questions
-- **GitHub Issues**: Report bugs and feature requests
-- **Documentation**: Check README.md for usage
-- **Community**: Join Discord for support
-
----
-
-**Deployment completed successfully! 🎉**
-
-ProofCapsule is now live on Sonic Mainnet and ready for production use. 

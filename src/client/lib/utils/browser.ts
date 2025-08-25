@@ -23,26 +23,14 @@ export function hashFile(file: File): Promise<string> {
       try {
         const arrayBuffer = e.target?.result as ArrayBuffer
         const uint8Array = new Uint8Array(arrayBuffer)
-        
-        // Create a more robust hash using SHA-256-like approach
         let hash = 0
-        let hash2 = 0
-        let hash3 = 0
-        let hash4 = 0
         
         for (let i = 0; i < uint8Array.length; i++) {
-          const byte = uint8Array[i]
-          hash = ((hash << 7) - hash + byte) & 0xFFFFFFFF
-          hash2 = ((hash2 << 11) - hash2 + byte) & 0xFFFFFFFF
-          hash3 = ((hash3 << 13) - hash3 + byte) & 0xFFFFFFFF
-          hash4 = ((hash4 << 17) - hash4 + byte) & 0xFFFFFFFF
+          hash = ((hash << 5) - hash) + uint8Array[i]
+          hash = hash & hash // Convert to 32-bit integer
         }
         
-        // Combine the hashes to create a 32-byte (64 character) hash
-        const combinedHash = (BigInt(hash) << BigInt(96)) | (BigInt(hash2) << BigInt(64)) | (BigInt(hash3) << BigInt(32)) | BigInt(hash4)
-        const hashString = combinedHash.toString(16).padStart(64, '0')
-        
-        resolve('0x' + hashString)
+        resolve('0x' + Math.abs(hash).toString(16).padStart(64, '0'))
       } catch (error) {
         reject(error)
       }
