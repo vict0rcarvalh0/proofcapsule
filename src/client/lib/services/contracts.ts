@@ -1,382 +1,246 @@
 // Smart Contract Service
 // Handles interactions with deployed ProofCapsule contracts
 
-import { getContract } from 'viem'
+import { PublicClient, WalletClient, getContract, parseAbi } from 'viem'
+import { getContractAddresses, isSupportedChain, getNetworkName } from '../contracts'
 import { usePublicClient, useWalletClient } from 'wagmi'
 
-// Contract addresses from deployment
-export const CONTRACT_ADDRESSES = {
-  PROOF_CAPSULE_NFT: process.env.NEXT_PUBLIC_NFT_ADDRESS || process.env.NFT_ADDRESS || '0x8F840F2d5df100C5c3b0C3d181c3EFA3d6C5068A',
-  PROOF_CAPSULE_REGISTRY: process.env.NEXT_PUBLIC_REGISTRY_ADDRESS || process.env.REGISTRY_ADDRESS || '0x45b1f38d1adfB5A9FFAA81b996a53bE78A33cF0c'
-} as const
+// Contract ABI for ProofCapsuleNFT
+const PROOF_CAPSULE_ABI = parseAbi([
+  'function createProofCapsule(bytes32 contentHash, string description, string location, string ipfsHash, bool isPublic) external returns (uint256)',
+  'function verifyContentHash(bytes32 contentHash) external view returns (bool)',
+  'function getCapsule(uint256 tokenId) external view returns (bytes32 contentHash, string description, string location, string ipfsHash, bool isPublic, uint256 createdAt)',
+  'function tokenURI(uint256 tokenId) external view returns (string)',
+  'function totalSupply() external view returns (uint256)',
+  'function ownerOf(uint256 tokenId) external view returns (address)',
+  'function name() external view returns (string)',
+  'function symbol() external view returns (string)',
+])
 
-// Contract ABIs (simplified versions)
-export const PROOF_CAPSULE_NFT_ABI = [
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "contentHash",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "string",
-        "name": "description",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "location",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "ipfsHash",
-        "type": "string"
-      },
-      {
-        "internalType": "bool",
-        "name": "isPublic",
-        "type": "bool"
-      }
-    ],
-    "name": "createProofCapsule",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "tokenURI",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "contentHash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "verifyContentHash",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "name": "getCapsule",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "contentHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "description",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "location",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "ipfsHash",
-            "type": "string"
-          },
-          {
-            "internalType": "bool",
-            "name": "isPublic",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct ProofCapsuleNFT.ProofCapsule",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const
+// Contract ABI for ProofCapsuleRegistry
+const REGISTRY_ABI = parseAbi([
+  'function createBatchCapsules(bytes32[] contentHashes, string[] descriptions, string[] locations, string[] ipfsHashes, bool[] isPublic) external returns (uint256[])',
+  'function getUserStats(address user) external view returns (uint256 totalCapsules, uint256 publicCapsules, uint256 privateCapsules, uint256 firstCapsuleAt, uint256 lastCapsuleAt)',
+])
 
-export const PROOF_CAPSULE_REGISTRY_ABI = [
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32[]",
-        "name": "contentHashes",
-        "type": "bytes32[]"
-      },
-      {
-        "internalType": "string[]",
-        "name": "descriptions",
-        "type": "string[]"
-      },
-      {
-        "internalType": "string[]",
-        "name": "locations",
-        "type": "string[]"
-      },
-      {
-        "internalType": "string[]",
-        "name": "ipfsHashes",
-        "type": "string[]"
-      },
-      {
-        "internalType": "bool[]",
-        "name": "isPublic",
-        "type": "bool[]"
-      }
-    ],
-    "name": "createBatchCapsules",
-    "outputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "",
-        "type": "uint256[]"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      }
-    ],
-    "name": "getUserStats",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "totalCapsules",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "publicCapsules",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "privateCapsules",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "totalVerifications",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "firstCapsuleTimestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "lastCapsuleTimestamp",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct ProofCapsuleRegistry.UserStats",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-] as const
+export interface CreateCapsuleParams {
+  contentHash: string
+  description: string
+  location: string
+  ipfsHash: string
+  isPublic: boolean
+}
 
-// Contract service class
+export interface CapsuleData {
+  contentHash: string
+  description: string
+  location: string
+  ipfsHash: string
+  isPublic: boolean
+  createdAt: bigint
+}
+
+export interface UserStats {
+  totalCapsules: bigint
+  publicCapsules: bigint
+  privateCapsules: bigint
+  firstCapsuleAt: bigint
+  lastCapsuleAt: bigint
+}
+
 export class ContractService {
-  private publicClient: any | null
-  private walletClient: any | null
+  private publicClient: PublicClient | null
+  private walletClient: WalletClient | null
 
-  constructor(publicClient: any | null, walletClient: any | null) {
+  constructor(publicClient: PublicClient | null, walletClient: WalletClient | null) {
     this.publicClient = publicClient
     this.walletClient = walletClient
   }
 
-  // Get NFT contract instance
-  getNFTContract() {
-    if (!this.publicClient) throw new Error('Public client not ready')
-    return getContract({
-      address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
-      abi: PROOF_CAPSULE_NFT_ABI,
-      client: this.publicClient
-    })
+  // Get contract addresses for the current network
+  private getCurrentContractAddresses(chainId: number) {
+    return getContractAddresses(chainId)
   }
 
-  // Get Registry contract instance
-  getRegistryContract() {
-    if (!this.publicClient) throw new Error('Public client not ready')
-    return getContract({
-      address: CONTRACT_ADDRESSES.PROOF_CAPSULE_REGISTRY as `0x${string}`,
-      abi: PROOF_CAPSULE_REGISTRY_ABI,
-      client: this.publicClient
-    })
+  // Check if the current network is supported
+  private checkNetworkSupport(chainId: number) {
+    if (!isSupportedChain(chainId)) {
+      throw new Error(`Unsupported network: ${getNetworkName(chainId)} (Chain ID: ${chainId}). Please switch to Sonic Mainnet or Sonic Blaze Testnet.`)
+    }
   }
 
-  // Create a single ProofCapsule
-  async createProofCapsule(params: {
-    contentHash: string
-    description: string
-    location: string
-    ipfsHash: string
-    isPublic: boolean
-  }) {
-    if (!this.walletClient) throw new Error('Connect your wallet first')
+  // Create a proof capsule
+  async createProofCapsule(params: CreateCapsuleParams): Promise<string> {
+    if (!this.publicClient || !this.walletClient) {
+      throw new Error('Wallet not connected')
+    }
+
+    const chainId = await this.publicClient.getChainId()
+    this.checkNetworkSupport(chainId)
+    
+    const addresses = this.getCurrentContractAddresses(chainId)
+    console.log(`Creating capsule on ${getNetworkName(chainId)} (Chain ID: ${chainId})`)
+    console.log(`Using NFT contract: ${addresses.nft}`)
+
+    const { contentHash, description, location, ipfsHash, isPublic } = params
+
     const hash = await this.walletClient.writeContract({
-      address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
-      abi: PROOF_CAPSULE_NFT_ABI,
+      address: addresses.nft as `0x${string}`,
+      abi: PROOF_CAPSULE_ABI,
       functionName: 'createProofCapsule',
-      args: [
-        params.contentHash as `0x${string}`,
-        params.description,
-        params.location,
-        params.ipfsHash,
-        params.isPublic
-      ]
+      args: [contentHash as `0x${string}`, description, location, ipfsHash, isPublic],
     })
 
     return hash
   }
 
-  // Verify content hash
-  async verifyContentHash(contentHash: string): Promise<bigint> {
-    if (!this.publicClient) throw new Error('Public client not ready')
+  // Verify content hash exists
+  async verifyContentHash(contentHash: string): Promise<boolean> {
+    if (!this.publicClient) {
+      throw new Error('Public client not available')
+    }
+
+    const chainId = await this.publicClient.getChainId()
+    this.checkNetworkSupport(chainId)
+    
+    const addresses = this.getCurrentContractAddresses(chainId)
+
     return await this.publicClient.readContract({
-      address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
-      abi: PROOF_CAPSULE_NFT_ABI,
+      address: addresses.nft as `0x${string}`,
+      abi: PROOF_CAPSULE_ABI,
       functionName: 'verifyContentHash',
-      args: [contentHash as `0x${string}`]
+      args: [contentHash as `0x${string}`],
     })
   }
 
-  // Get capsule data
-  async getCapsule(tokenId: bigint) {
-    if (!this.publicClient) throw new Error('Public client not ready')
-    return await this.publicClient.readContract({
-      address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
-      abi: PROOF_CAPSULE_NFT_ABI,
+  // Get capsule data by token ID
+  async getCapsule(tokenId: bigint): Promise<CapsuleData> {
+    if (!this.publicClient) {
+      throw new Error('Public client not available')
+    }
+
+    const chainId = await this.publicClient.getChainId()
+    this.checkNetworkSupport(chainId)
+    
+    const addresses = this.getCurrentContractAddresses(chainId)
+
+    const [contentHash, description, location, ipfsHash, isPublic, createdAt] = await this.publicClient.readContract({
+      address: addresses.nft as `0x${string}`,
+      abi: PROOF_CAPSULE_ABI,
       functionName: 'getCapsule',
-      args: [tokenId]
+      args: [tokenId],
     })
+
+    return {
+      contentHash,
+      description,
+      location,
+      ipfsHash,
+      isPublic,
+      createdAt,
+    }
   }
 
-  // Get token URI (IPFS metadata)
+  // Get token URI
   async getTokenURI(tokenId: bigint): Promise<string> {
-    if (!this.publicClient) throw new Error('Public client not ready')
+    if (!this.publicClient) {
+      throw new Error('Public client not available')
+    }
+
+    const chainId = await this.publicClient.getChainId()
+    this.checkNetworkSupport(chainId)
+    
+    const addresses = this.getCurrentContractAddresses(chainId)
+
     return await this.publicClient.readContract({
-      address: CONTRACT_ADDRESSES.PROOF_CAPSULE_NFT as `0x${string}`,
-      abi: PROOF_CAPSULE_NFT_ABI,
+      address: addresses.nft as `0x${string}`,
+      abi: PROOF_CAPSULE_ABI,
       functionName: 'tokenURI',
-      args: [tokenId]
+      args: [tokenId],
     })
   }
 
-  // Get user stats from registry
-  async getUserStats(userAddress: string) {
-    if (!this.publicClient) throw new Error('Public client not ready')
-    return await this.publicClient.readContract({
-      address: CONTRACT_ADDRESSES.PROOF_CAPSULE_REGISTRY as `0x${string}`,
-      abi: PROOF_CAPSULE_REGISTRY_ABI,
+  // Get user statistics
+  async getUserStats(walletAddress: string): Promise<UserStats> {
+    if (!this.publicClient) {
+      throw new Error('Public client not available')
+    }
+
+    const chainId = await this.publicClient.getChainId()
+    this.checkNetworkSupport(chainId)
+    
+    const addresses = this.getCurrentContractAddresses(chainId)
+
+    const [totalCapsules, publicCapsules, privateCapsules, firstCapsuleAt, lastCapsuleAt] = await this.publicClient.readContract({
+      address: addresses.registry as `0x${string}`,
+      abi: REGISTRY_ABI,
       functionName: 'getUserStats',
-      args: [userAddress as `0x${string}`]
+      args: [walletAddress as `0x${string}`],
     })
+
+    return {
+      totalCapsules,
+      publicCapsules,
+      privateCapsules,
+      firstCapsuleAt,
+      lastCapsuleAt,
+    }
   }
 
   // Create multiple capsules in batch
-  async createBatchCapsules(params: {
-    contentHashes: string[]
-    descriptions: string[]
-    locations: string[]
-    ipfsHashes: string[]
-    isPublic: boolean[]
-  }) {
-    if (!this.walletClient) throw new Error('Connect your wallet first')
+  async createBatchCapsules(capsules: CreateCapsuleParams[]): Promise<string[]> {
+    if (!this.publicClient || !this.walletClient) {
+      throw new Error('Wallet not connected')
+    }
+
+    const chainId = await this.publicClient.getChainId()
+    this.checkNetworkSupport(chainId)
+    
+    const addresses = this.getCurrentContractAddresses(chainId)
+
+    const contentHashes = capsules.map(c => c.contentHash as `0x${string}`)
+    const descriptions = capsules.map(c => c.description)
+    const locations = capsules.map(c => c.location)
+    const ipfsHashes = capsules.map(c => c.ipfsHash)
+    const isPublic = capsules.map(c => c.isPublic)
+
     const hash = await this.walletClient.writeContract({
-      address: CONTRACT_ADDRESSES.PROOF_CAPSULE_REGISTRY as `0x${string}`,
-      abi: PROOF_CAPSULE_REGISTRY_ABI,
+      address: addresses.registry as `0x${string}`,
+      abi: REGISTRY_ABI,
       functionName: 'createBatchCapsules',
-      args: [
-        params.contentHashes.map(h => h as `0x${string}`),
-        params.descriptions,
-        params.locations,
-        params.ipfsHashes,
-        params.isPublic
-      ]
+      args: [contentHashes, descriptions, locations, ipfsHashes, isPublic],
     })
 
-    return hash
+    return [hash]
   }
 
-  // Wait for transaction and get receipt
-  async waitForTransaction(hash: `0x${string}`) {
-    if (!this.publicClient) throw new Error('Public client not ready')
-    return await this.publicClient.waitForTransactionReceipt({ hash })
+  // Wait for transaction confirmation
+  async waitForTransaction(hash: string) {
+    if (!this.publicClient) {
+      throw new Error('Public client not available')
+    }
+
+    return await this.publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` })
   }
 
   // Get transaction details
-  async getTransaction(hash: `0x${string}`) {
-    if (!this.publicClient) throw new Error('Public client not ready')
-    return await this.publicClient.getTransaction({ hash })
+  async getTransaction(hash: string) {
+    if (!this.publicClient) {
+      throw new Error('Public client not available')
+    }
+
+    return await this.publicClient.getTransaction({ hash: hash as `0x${string}` })
   }
 }
 
-// Hook to use contract service
+// Hook to get contract service
 export function useContractService() {
   const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
 
-  // Do not throw on mount; return a service that guards methods internally
-  return new ContractService(publicClient ?? null, walletClient ?? null)
+  if (!publicClient || !walletClient) {
+    return new ContractService(null, null)
+  }
+
+  return new ContractService(publicClient, walletClient)
 } 

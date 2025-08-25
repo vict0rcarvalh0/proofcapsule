@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Camera, Home, Images, Search, User } from "lucide-react"
+import { Camera, Home, Images, Search, User, Network } from "lucide-react"
 import { WalletConnect } from "@/components/wallet-connect"
 
 const navigation = [
@@ -12,6 +12,7 @@ const navigation = [
   { name: "Gallery", href: "/gallery", icon: Images },
   { name: "Verify", href: "/verify", icon: Search },
   { name: "Profile", href: "/profile", icon: User },
+  { name: "Test Network", href: "/test-network", icon: Network },
 ]
 
 export function Navigation() {

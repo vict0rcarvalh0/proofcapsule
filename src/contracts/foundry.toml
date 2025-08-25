@@ -12,8 +12,8 @@ sonic_testnet = "https://rpc.testnet.soniclabs.com"
 sonic_mainnet = "https://rpc.soniclabs.com"
 sonic_blaze = "https://rpc.blaze.soniclabs.com"
 
-[etherscan]
-sonic_mainnet = { key = "", url = "https://explorer.soniclabs.com/api" }
-sonic_blaze = { key = "" }
+# [etherscan]
+# sonic_mainnet = { key = "", url = "https://explorer.soniclabs.com/api" }
+# sonic_testnet = { key = "", url = "https://explorer.testnet.soniclabs.com/api" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

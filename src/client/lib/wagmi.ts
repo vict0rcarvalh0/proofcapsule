@@ -21,7 +21,7 @@ const sonicMainnet = {
   },
 } as const
 
-// Sonic Testnet configuration (for reference)
+// Sonic Testnet configuration
 const sonicTestnet = {
   id: 14601,
   name: 'Sonic Testnet',
@@ -45,6 +45,9 @@ const sonicTestnet = {
 export const config = getDefaultConfig({
   appName: 'ProofCapsule',
   projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '',
-  chains: [sonicMainnet, sonicTestnet, mainnet], // Mainnet first as default
+  chains: [sonicTestnet, sonicMainnet, mainnet], // Testnet first for testing
   ssr: true,
-}) 
+})
+
+// Export chain configurations for dynamic contract address selection
+export { sonicMainnet, sonicTestnet } 
