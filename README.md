@@ -1,5 +1,7 @@
 # ProofCapsule - Immutable Proof of Existence
 
+<img src="assets/proofcapsule.png">
+
 **Preserve your digital moments on-chain with immutable timestamps.**
 
 ## **What is ProofCapsule?**
