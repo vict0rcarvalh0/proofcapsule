@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
     let insertTest = 'Not tested'
     
     try {
-      // Test 1: Basic connection
-      const result = await (db as any).select().from('capsules').limit(1)
+      // Test 1: Basic connection using proper Drizzle syntax
+      const result = await (db as any).select().from(capsules).limit(1)
       dbTest = 'Connected successfully'
       
       // Test 2: Check if tables exist
