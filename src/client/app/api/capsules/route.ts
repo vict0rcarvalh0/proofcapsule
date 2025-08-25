@@ -39,11 +39,16 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
   
   try {
-    console.log('Starting capsule creation...')
+    console.log('Starting capsule creation...', {
+      readonly: READONLY,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      environment: process.env.NODE_ENV
+    })
+    
     const body = await request.json()
 
     if (READONLY) {
-      // In readonly mode, accept but do not persist
+      console.log('API in readonly mode - accepting but not persisting')
       return NextResponse.json({ success: true, data: { ...body, id: 0 } }, { status: 201 })
     }
 
@@ -60,6 +65,23 @@ export async function POST(request: NextRequest) {
       gasUsed
     } = body
 
+    console.log('Validating input data...', {
+      tokenId,
+      walletAddress: walletAddress?.slice(0, 10) + '...',
+      contentHash: contentHash?.slice(0, 10) + '...',
+      hasDescription: !!description,
+      hasLocation: !!location,
+      hasIpfsHash: !!ipfsHash
+    })
+
+    // Validate required fields
+    if (!tokenId || !walletAddress || !contentHash) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields: tokenId, walletAddress, contentHash' },
+        { status: 400 }
+      )
+    }
+
     console.log('Checking for existing capsule...')
     // Check if content hash already exists
     const existingCapsule = await (db as any)
@@ -69,6 +91,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     if (existingCapsule.length > 0) {
+      console.log('Content hash already exists:', contentHash.slice(0, 10) + '...')
       return NextResponse.json(
         { success: false, error: 'Content hash already exists' },
         { status: 409 }
@@ -76,22 +99,27 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Creating new capsule...')
-    // Create the capsule
+    // Create the capsule with timeout handling
+    const capsuleData = {
+      tokenId,
+      walletAddress,
+      contentHash,
+      description,
+      location,
+      ipfsHash,
+      isPublic: isPublic || false,
+      blockNumber,
+      transactionHash,
+      gasUsed
+    }
+
+    console.log('Inserting capsule data...')
     const [newCapsule] = await (db as any)
       .insert(capsules)
-      .values({
-        tokenId,
-        walletAddress,
-        contentHash,
-        description,
-        location,
-        ipfsHash,
-        isPublic: isPublic || false,
-        blockNumber,
-        transactionHash,
-        gasUsed
-      })
+      .values(capsuleData)
       .returning()
+
+    console.log('Capsule created successfully, ID:', newCapsule.id)
 
     console.log('Creating/updating user...')
     // Create or update user if not exists
@@ -105,19 +133,47 @@ export async function POST(request: NextRequest) {
       .onConflictDoNothing()
 
     console.log('Updating user stats...')
-    // Update user stats
-    await updateUserStats(walletAddress)
+    // Update user stats (don't let this fail the main operation)
+    try {
+      await updateUserStats(walletAddress)
+    } catch (statsError) {
+      console.warn('User stats update failed, but continuing:', statsError)
+    }
 
     const endTime = Date.now()
-    console.log(`Capsule creation completed in ${endTime - startTime}ms`)
+    console.log(`Capsule creation completed successfully in ${endTime - startTime}ms`)
 
     return NextResponse.json({ success: true, data: newCapsule }, { status: 201 })
   } catch (error) {
     const endTime = Date.now()
-    console.error(`Error creating capsule after ${endTime - startTime}ms:`, error)
+    const duration = endTime - startTime
+    
+    console.error(`Error creating capsule after ${duration}ms:`, {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      readonly: READONLY,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      environment: process.env.NODE_ENV
+    })
     
     // Return a more specific error message
     const errorMessage = error instanceof Error ? error.message : 'Unknown database error'
+    
+    // Check for common database errors
+    if (errorMessage.includes('timeout') || errorMessage.includes('connection')) {
+      return NextResponse.json(
+        { success: false, error: 'Database connection timeout. Please try again.' },
+        { status: 503 }
+      )
+    }
+    
+    if (errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
+      return NextResponse.json(
+        { success: false, error: 'Capsule already exists with this content hash' },
+        { status: 409 }
+      )
+    }
+    
     return NextResponse.json(
       { success: false, error: `Failed to create capsule: ${errorMessage}` },
       { status: 500 }

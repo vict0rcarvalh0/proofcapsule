@@ -379,10 +379,24 @@ function CapturePageComponent() {
       if (!response.success) {
         console.warn('Database save failed, but NFT was minted successfully:', response.error)
         
-        // Show a warning but don't fail the entire operation since NFT was minted
-        toast.warning('NFT minted successfully! Database save failed.', {
-          description: 'Your capsule exists on the blockchain. Check your gallery to view it.'
-        })
+        // Show a more specific error message based on the type of failure
+        if (response.error?.includes('timeout')) {
+          toast.warning('NFT minted successfully! Database timeout.', {
+            description: 'Your capsule exists on the blockchain. Database save may be delayed.'
+          })
+        } else if (response.error?.includes('connection')) {
+          toast.warning('NFT minted successfully! Database connection issue.', {
+            description: 'Your capsule exists on the blockchain. Database temporarily unavailable.'
+          })
+        } else if (response.error?.includes('already exists')) {
+          toast.warning('NFT minted successfully! Capsule already exists.', {
+            description: 'Your capsule exists on the blockchain and may already be in your gallery.'
+          })
+        } else {
+          toast.warning('NFT minted successfully! Database save failed.', {
+            description: `Your capsule exists on the blockchain. Error: ${response.error}`
+          })
+        }
         
         // Continue with success flow since the NFT was created
       } else {
