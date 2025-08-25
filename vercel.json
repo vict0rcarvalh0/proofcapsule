@@ -1,5 +1,9 @@
 {
-  "buildCommand": "npm run build",
-  "installCommand": "npm install --force",
-  "framework": "nextjs"
+  "buildCommand": "cd src/client && npm run build",
+  "installCommand": "cd src/client && npm install",
+  "functions": {
+    "src/client/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
 } 
