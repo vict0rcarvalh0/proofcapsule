@@ -1,5 +1,8 @@
 # ProofCapsule - Immutable Proof of Existence
 
+> [!IMPORTANT]  
+> University Enrollment Proof on [assets/student-proof.pdf](/assets/student-proof.pdf)
+
 <img src="assets/proofcapsule.png">
 
 **Preserve your digital moments on-chain with immutable timestamps.**
